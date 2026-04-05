@@ -1,67 +1,31 @@
 import 'dart:async';
 import 'dart:io';
-import 'dart:isolate';
 import 'package:path/path.dart' as p;
 import '../models/file_node.dart';
 
-/// Production-grade file service for Windows/macOS/Linux.
+/// File service using **shallow lazy listing** — never recursive.
+///
+/// Model:
+/// 1. User explicitly adds root folders (e.g., `C:\Projects`, `D:\Docs`).
+/// 2. Each root folder is listed **shallow** (immediate children only).
+/// 3. Subdirectories are expanded on-demand — their children are listed
+///    shallowly at that moment.
+/// 4. No full-disk scan. No isolate. No blocking. Startup is instant.
+/// 5. LRU cache avoids redundant disk I/O for recently accessed folders.
 class FileService {
   final Map<String, _CacheEntry> _cache = {};
-  static const _cacheMaxAge = Duration(seconds: 30);
-  static const _cacheMaxSize = 1000;
+  static const _cacheMaxAge = Duration(seconds: 60);
+  static const _cacheMaxSize = 500;
 
   final Set<String> _defaultExtensions = {'md', 'markdown', 'mdx', 'txt'};
 
-  // Windows system directories to skip (compiled once, reused).
-  // Works on any drive letter (C:, D:, etc.).
-  static final List<RegExp> _protectedPatterns = [
-    RegExp(r'^[A-Za-z]:\\Windows($|\\)', caseSensitive: false),
-    RegExp(r'^[A-Za-z]:\\Program Files($|\\)', caseSensitive: false),
-    RegExp(r'^[A-Za-z]:\\Program Files \(x86\)($|\\)', caseSensitive: false),
-    RegExp(r'^[A-Za-z]:\\ProgramData($|\\)', caseSensitive: false),
-    RegExp(r'^[A-Za-z]:\\\$Recycle\.Bin($|\\)', caseSensitive: false),
-    RegExp(r'^[A-Za-z]:\\System Volume Information($|\\)', caseSensitive: false),
-    RegExp(r'^[A-Za-z]:\\MSOCache($|\\)', caseSensitive: false),
-    RegExp(r'^[A-Za-z]:\\PerfLogs($|\\)', caseSensitive: false),
-    RegExp(r'^[A-Za-z]:\\Recovery($|\\)', caseSensitive: false),
-    RegExp(r'^[A-Za-z]:\\Boot($|\\)', caseSensitive: false),
-    RegExp(r'^[A-Za-z]:\\Config\.Msi($|\\)', caseSensitive: false),
-  ];
-
   // ─── Public API ───
 
-  /// Build a complete folder tree for a root directory.
-  /// Recursively finds ALL directories containing supported files at ANY depth.
-  Future<FileNode?> buildRootNode(
-    String directoryPath, {
-    Set<String>? allowedExtensions,
-    bool showHidden = false,
-  }) async {
-    try {
-      final dir = Directory(directoryPath);
-      if (!await dir.exists()) return null;
-
-      final name = p.basename(directoryPath);
-      final stat = await dir.stat();
-      final exts = allowedExtensions ?? _defaultExtensions;
-
-      // Recursive structure scan in isolate (non-blocking)
-      final children = await _scanStructureAsync(directoryPath, exts, showHidden);
-
-      return FileNode(
-        path: directoryPath,
-        name: name,
-        isDirectory: true,
-        lastModified: stat.modified,
-        children: children,
-        isExpanded: false,
-      );
-    } catch (e) {
-      return null;
-    }
-  }
-
-  /// List immediate children of a directory (for navigation/bookmark access).
+  /// List immediate children of a directory (shallow — no recursion).
+  ///
+  /// Returns both files (matching extensions) and directories.
+  /// Directories are included only if they contain .md files at ANY depth
+  /// (quick shallow check — scans at most one sublevel to avoid full recursion).
   Future<List<FileNode>> listDirectory(
     String directoryPath, {
     Set<String>? allowedExtensions,
@@ -86,31 +50,39 @@ class FileService {
         final entityName = p.basename(entity.path);
         if (!showHidden && entityName.startsWith('.')) continue;
 
-        if (entity is Directory) {
-          // Only show directories that have .md files somewhere in their subtree
-          final hasMarkdown = await _directoryHasMarkdownDeep(entity.path, exts, showHidden);
-          if (!hasMarkdown) continue;
+        try {
+          if (entity is Directory) {
+            // Skip Windows system directories that always fail
+            if (_isProtectedSystemDirectory(entity.path)) continue;
 
-          final stat = await entity.stat();
-          children.add(FileNode(
-            path: entity.path,
-            name: entityName,
-            isDirectory: true,
-            lastModified: stat.modified,
-            children: [],
-          ));
-        } else if (entity is File) {
-          final ext = p.extension(entityName).replaceAll('.', '').toLowerCase();
-          if (!exts.contains(ext)) continue;
+            // Quick check: does this folder have .md files (shallow, max 1 sublevel)?
+            final hasMarkdown = await _folderHasMarkdownShallow(entity.path, exts, showHidden);
+            if (!hasMarkdown) continue;
 
-          final fileStat = await entity.stat();
-          children.add(FileNode(
-            path: entity.path,
-            name: entityName,
-            isDirectory: false,
-            lastModified: fileStat.modified,
-            size: fileStat.size,
-          ));
+            final stat = await entity.stat();
+            children.add(FileNode(
+              path: entity.path,
+              name: entityName,
+              isDirectory: true,
+              lastModified: stat.modified,
+              children: [],
+            ));
+          } else if (entity is File) {
+            final ext = p.extension(entityName).replaceAll('.', '').toLowerCase();
+            if (!exts.contains(ext)) continue;
+
+            final fileStat = await entity.stat();
+            children.add(FileNode(
+              path: entity.path,
+              name: entityName,
+              isDirectory: false,
+              lastModified: fileStat.modified,
+              size: fileStat.size,
+            ));
+          }
+        } catch (e) {
+          // Skip inaccessible entities
+          continue;
         }
       }
 
@@ -124,6 +96,38 @@ class FileService {
       return children;
     } catch (e) {
       return [];
+    }
+  }
+
+  /// Build a root folder node (shallow listing of immediate children only).
+  /// This is called for each user-added root folder. Instant — no recursion.
+  Future<FileNode?> buildRootNode(
+    String directoryPath, {
+    Set<String>? allowedExtensions,
+    bool showHidden = false,
+  }) async {
+    try {
+      final dir = Directory(directoryPath);
+      if (!await dir.exists()) return null;
+
+      final name = p.basename(directoryPath);
+      final stat = await dir.stat();
+      final children = await listDirectory(
+        directoryPath,
+        allowedExtensions: allowedExtensions,
+        showHidden: showHidden,
+      );
+
+      return FileNode(
+        path: directoryPath,
+        name: name,
+        isDirectory: true,
+        lastModified: stat.modified,
+        children: children,
+        isExpanded: false,
+      );
+    } catch (e) {
+      return null;
     }
   }
 
@@ -149,167 +153,65 @@ class FileService {
     _cache.clear();
   }
 
-  // ─── Private: Recursive scan in isolate ───
+  // ─── Private: Protected directory detection ───
 
-  Future<List<FileNode>> _scanStructureAsync(
-    String directoryPath,
-    Set<String> exts,
-    bool showHidden,
-  ) async {
-    return Isolate.run(() {
-      return _buildTreeSync(directoryPath, exts.toList(), showHidden);
-    });
-  }
+  static final List<RegExp> _protectedPatterns = [
+    RegExp(r'^[A-Za-z]:\\Windows($|\\)', caseSensitive: false),
+    RegExp(r'^[A-Za-z]:\\Program Files($|\\)', caseSensitive: false),
+    RegExp(r'^[A-Za-z]:\\Program Files \(x86\)($|\\)', caseSensitive: false),
+    RegExp(r'^[A-Za-z]:\\ProgramData($|\\)', caseSensitive: false),
+    RegExp(r'^[A-Za-z]:\\\$Recycle\.Bin($|\\)', caseSensitive: false),
+    RegExp(r'^[A-Za-z]:\\System Volume Information($|\\)', caseSensitive: false),
+    RegExp(r'^[A-Za-z]:\\MSOCache($|\\)', caseSensitive: false),
+    RegExp(r'^[A-Za-z]:\\PerfLogs($|\\)', caseSensitive: false),
+    RegExp(r'^[A-Za-z]:\\Recovery($|\\)', caseSensitive: false),
+    RegExp(r'^[A-Za-z]:\\Boot($|\\)', caseSensitive: false),
+    RegExp(r'^[A-Za-z]:\\Config\.Msi($|\\)', caseSensitive: false),
+  ];
 
-  /// Synchronous recursive tree builder.
-  ///
-  /// IMPORTANT: Permission errors on individual directories are handled
-  /// gracefully — the scan continues with other directories. Only the
-  /// inaccessible branch is skipped, not the entire tree.
-  static List<FileNode> _buildTreeSync(
-    String dirPath,
-    List<String> allowedExtensions,
-    bool showHidden,
-  ) {
-    final exts = allowedExtensions.toSet();
-    final children = <FileNode>[];
-
-    // Try to list this directory. If it fails (permission denied),
-    // return empty — the parent will handle the "no children" case.
-    List<FileSystemEntity> entities;
-    try {
-      final dir = Directory(dirPath);
-      if (!dir.existsSync()) return [];
-      entities = dir.listSync(recursive: false, followLinks: false);
-    } catch (e) {
-      // Permission denied, reparse point, etc. — skip this directory entirely
-      return [];
-    }
-
-    for (final entity in entities) {
-      final entityName = p.basename(entity.path);
-      if (!showHidden && entityName.startsWith('.')) continue;
-
-      try {
-        if (entity is Directory) {
-          // Skip Windows special directories that are always inaccessible
-          if (_isProtectedSystemDirectory(entity.path)) continue;
-
-          // Recursively scan subdirectory
-          final subChildren = _buildTreeSync(entity.path, allowedExtensions, showHidden);
-
-          // Only include this directory if it has markdown files in its subtree
-          if (subChildren.isNotEmpty || _dirHasFilesDirect(entity.path, exts, showHidden)) {
-            final stat = entity.statSync();
-            children.add(FileNode(
-              path: entity.path,
-              name: entityName,
-              isDirectory: true,
-              lastModified: stat.modified,
-              children: subChildren,
-            ));
-          }
-        } else if (entity is File) {
-          final ext = p.extension(entityName).replaceAll('.', '').toLowerCase();
-          if (exts.contains(ext)) {
-            final fileStat = entity.statSync();
-            children.add(FileNode(
-              path: entity.path,
-              name: entityName,
-              isDirectory: false,
-              lastModified: fileStat.modified,
-              size: fileStat.size,
-            ));
-          }
-        }
-      } catch (e) {
-        // Individual entity error — skip and continue
-        continue;
-      }
-    }
-
-    // Sort: directories first, then files, both alphabetically
-    children.sort((a, b) {
-      if (a.isDirectory && !b.isDirectory) return -1;
-      if (!a.isDirectory && b.isDirectory) return 1;
-      return a.name.toLowerCase().compareTo(b.name.toLowerCase());
-    });
-
-    return children;
-  }
-
-  /// Check if a path is a Windows protected system directory.
   static bool _isProtectedSystemDirectory(String path) {
     final normalized = path.replaceAll('/', r'\');
     return _protectedPatterns.any((pattern) => pattern.hasMatch(normalized));
   }
 
-  /// Quick check: does this directory have any supported files directly in it?
-  /// (No recursion — just the immediate level.)
-  static bool _dirHasFilesDirect(
+  // ─── Private: Shallow markdown detection ───
+
+  /// Quick shallow check: does this folder have .md files?
+  /// Checks the immediate level + one sublevel deep (not full recursion).
+  /// This prevents listing folders that are completely empty of .md files
+  /// while avoiding expensive full recursive scans.
+  Future<bool> _folderHasMarkdownShallow(
     String dirPath,
     Set<String> exts,
     bool showHidden,
-  ) {
+  ) async {
     try {
       final dir = Directory(dirPath);
-      if (!dir.existsSync()) return false;
+      if (!await dir.exists()) return false;
 
-      for (final entity in dir.listSync(recursive: false, followLinks: false)) {
+      // Check immediate files
+      await for (final entity in dir.list(recursive: false, followLinks: false)) {
         if (entity is File) {
           final name = p.basename(entity.path);
           if (!showHidden && name.startsWith('.')) continue;
           final ext = p.extension(name).replaceAll('.', '').toLowerCase();
           if (exts.contains(ext)) return true;
-        }
-      }
-    } catch (e) {
-      return false;
-    }
-    return false;
-  }
-
-  /// Deep recursive check: does this directory contain .md files at ANY depth?
-  /// Used for lazy-loaded directory expansion. Runs in isolate.
-  Future<bool> _directoryHasMarkdownDeep(
-    String dirPath,
-    Set<String> exts,
-    bool showHidden,
-  ) async {
-    return Isolate.run(() => _checkHasMarkdownSync(dirPath, exts.toList(), showHidden));
-  }
-
-  static bool _checkHasMarkdownSync(
-    String dirPath,
-    List<String> allowedExtensions,
-    bool showHidden,
-  ) {
-    final exts = allowedExtensions.toSet();
-    return _deepSearch(dirPath, exts, showHidden);
-  }
-
-  /// Deep recursive search for markdown files.
-  /// Tolerates permission errors on individual directories.
-  static bool _deepSearch(String dirPath, Set<String> exts, bool showHidden) {
-    try {
-      if (_isProtectedSystemDirectory(dirPath)) return false;
-
-      final dir = Directory(dirPath);
-      if (!dir.existsSync()) return false;
-
-      for (final entity in dir.listSync(recursive: false, followLinks: false)) {
-        try {
-          if (entity is File) {
-            final name = p.basename(entity.path);
-            if (!showHidden && name.startsWith('.')) continue;
-            final ext = p.extension(name).replaceAll('.', '').toLowerCase();
-            if (exts.contains(ext)) return true;
-          } else if (entity is Directory) {
-            if (_deepSearch(entity.path, exts, showHidden)) return true;
+        } else if (entity is Directory) {
+          // Check one sublevel deep
+          if (_isProtectedSystemDirectory(entity.path)) continue;
+          try {
+            final subdir = Directory(entity.path);
+            await for (final subEntity in subdir.list(recursive: false, followLinks: false)) {
+              if (subEntity is File) {
+                final subName = p.basename(subEntity.path);
+                if (!showHidden && subName.startsWith('.')) continue;
+                final subExt = p.extension(subName).replaceAll('.', '').toLowerCase();
+                if (exts.contains(subExt)) return true;
+              }
+            }
+          } catch (e) {
+            continue;
           }
-        } catch (e) {
-          // Skip inaccessible items
-          continue;
         }
       }
     } catch (e) {

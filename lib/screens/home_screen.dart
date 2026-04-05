@@ -11,20 +11,7 @@ import 'settings_screen.dart';
 
 /// Main home screen — fully responsive across mobile/tablet/desktop.
 ///
-/// Layout strategy:
-/// ┌─────────────────────────────────────────────┐
-/// │ COMPACT (< 600px) — Mobile                  │
-/// │ [Drawer: Tree] → [Main: Files] → [Sheet: V] │
-/// │ Single panel at a time, bottom nav bar      │
-/// ├─────────────────────────────────────────────┤
-/// │ MEDIUM (600-1024px) — Tablet                │
-/// │ [Sidebar] + [Files/Viewer toggle]           │
-/// │ 2 panels, viewer slides in from right       │
-/// ├─────────────────────────────────────────────┤
-/// │ EXPANDED (> 1024px) — Desktop               │
-/// │ [Sidebar] + [Files] + [Viewer]              │
-/// │ 3 panels, all visible simultaneously        │
-/// └─────────────────────────────────────────────┘
+/// Key model: User explicitly adds folders to scan. No full-disk scanning.
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
 
@@ -36,6 +23,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   @override
   void initState() {
     super.initState();
+    // Auto-load configured folders on startup (shallow — instant)
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final settings = ref.read(settingsProvider);
       if (settings.rootFolders.isNotEmpty) {
@@ -45,6 +33,35 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             );
       }
     });
+  }
+
+  Future<void> _addRootFolder() async {
+    final result = await FilePicker.platform.getDirectoryPath();
+    if (result != null) {
+      await ref.read(settingsProvider.notifier).addRootFolder(result);
+      final settings = ref.read(settingsProvider);
+      ref.read(fileTreeProvider.notifier).loadRoots(
+            settings.rootFolders,
+            settings,
+          );
+    }
+  }
+
+  Future<void> _removeRootFolder(String path) async {
+    await ref.read(settingsProvider.notifier).removeRootFolder(path);
+    final settings = ref.read(settingsProvider);
+    ref.read(fileTreeProvider.notifier).loadRoots(
+          settings.rootFolders,
+          settings,
+        );
+  }
+
+  void _refreshFolders() {
+    final settings = ref.read(settingsProvider);
+    ref.read(fileTreeProvider.notifier).refresh(
+          settings.rootFolders,
+          settings,
+        );
   }
 
   @override
@@ -187,7 +204,6 @@ class _TabletLayout extends ConsumerWidget {
 
     return Row(
       children: [
-        // Sidebar (narrower on tablet)
         Container(
           width: 240,
           decoration: BoxDecoration(
@@ -228,7 +244,6 @@ class _TabletLayout extends ConsumerWidget {
             ],
           ),
         ),
-        // Main area: file list or viewer
         Expanded(
           child: selectedFile == null
               ? const _FileListContent()
@@ -253,7 +268,6 @@ class _MobileLayout extends ConsumerWidget {
 
     return Scaffold(
       backgroundColor: AppColors.backgroundBase,
-      // App bar
       appBar: AppBar(
         backgroundColor: AppColors.backgroundSurface,
         elevation: 0,
@@ -306,9 +320,7 @@ class _MobileLayout extends ConsumerWidget {
           ),
         ],
       ),
-      // Drawer: folder tree
       drawer: _MobileDrawer(),
-      // Body: depends on active panel
       body: switch (uiState.activeMobilePanel) {
         MobilePanel.tree => const _FolderTreeContent(),
         MobilePanel.files => const _FileListContent(),
@@ -316,9 +328,7 @@ class _MobileLayout extends ConsumerWidget {
             ? _ViewerContent(showBackButton: true)
             : const _MobileEmptyViewer(),
       },
-      // Bottom navigation
       bottomNavigationBar: _MobileBottomNav(),
-      // FAB: add folder (only on tree/files panel)
       floatingActionButton: uiState.activeMobilePanel != MobilePanel.viewer
           ? FloatingActionButton.small(
               heroTag: 'addFolder',
@@ -340,7 +350,6 @@ class _MobileLayout extends ConsumerWidget {
   }
 }
 
-/// Mobile drawer containing the folder tree, bookmarks, and lists.
 class _MobileDrawer extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -349,7 +358,6 @@ class _MobileDrawer extends ConsumerWidget {
       child: SafeArea(
         child: Column(
           children: [
-            // Drawer header
             Container(
               padding: const EdgeInsets.all(16),
               child: Row(
@@ -407,14 +415,11 @@ class _MobileDrawer extends ConsumerWidget {
   }
 }
 
-/// Mobile bottom navigation bar.
 class _MobileBottomNav extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final uiState = ref.watch(uiProvider);
     final selectedFile = ref.watch(selectedFileProvider);
-
-    // If no file selected, only show Tree and Files tabs
     final hasViewer = selectedFile != null;
 
     return NavigationBar(
@@ -471,7 +476,6 @@ class _MobileBottomNav extends ConsumerWidget {
   }
 }
 
-/// Mobile empty state for viewer when no file is selected.
 class _MobileEmptyViewer extends StatelessWidget {
   const _MobileEmptyViewer();
 
@@ -509,10 +513,9 @@ class _MobileEmptyViewer extends StatelessWidget {
 }
 
 // ═══════════════════════════════════════════════════
-// SHARED COMPONENTS (used by all layout modes)
+// SHARED COMPONENTS
 // ═══════════════════════════════════════════════════
 
-/// App header with logo, refresh, add folder.
 class _AppHeader extends StatelessWidget {
   final VoidCallback onRefresh;
   final VoidCallback onAddFolder;
@@ -556,7 +559,6 @@ class _AppHeader extends StatelessWidget {
             ),
             tooltip: 'Refresh',
             onPressed: onRefresh,
-            // Ensure 48px touch target
             constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
           ),
           IconButton(
@@ -575,41 +577,57 @@ class _AppHeader extends StatelessWidget {
   }
 }
 
-/// Folder tree content — used by all layouts.
+/// Folder tree with prominent empty state + managed folder list.
 class _FolderTreeContent extends ConsumerWidget {
   const _FolderTreeContent();
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final settings = ref.watch(settingsProvider);
     final treeState = ref.watch(fileTreeProvider);
+
     return treeState.when(
-      data: (nodes) => nodes.isEmpty
-          ? _EmptyTree(
-              onAddFolder: () async {
-                final result = await FilePicker.platform.getDirectoryPath();
-                if (result != null) {
-                  await ref.read(settingsProvider.notifier).addRootFolder(result);
-                  ref.read(fileTreeProvider.notifier).loadRoots(
-                        ref.read(settingsProvider).rootFolders,
-                        ref.read(settingsProvider),
-                      );
-                }
-              },
-            )
-          : ListView.builder(
-              padding: const EdgeInsets.only(top: 8),
-              itemCount: nodes.length,
-              itemBuilder: (context, index) {
-                return _TreeNodeWidget(node: nodes[index], depth: 0);
-              },
+      data: (nodes) {
+        // No folders added yet — show setup prompt
+        if (settings.rootFolders.isEmpty) {
+          return _EmptyState(onAddFolder: () async {
+            final result = await FilePicker.platform.getDirectoryPath();
+            if (result != null) {
+              await ref.read(settingsProvider.notifier).addRootFolder(result);
+              ref.read(fileTreeProvider.notifier).loadRoots(
+                    ref.read(settingsProvider).rootFolders,
+                    ref.read(settingsProvider),
+                  );
+            }
+          });
+        }
+
+        // Folders added but empty tree (loading or truly empty)
+        if (nodes.isEmpty) {
+          return const Center(
+            child: Padding(
+              padding: EdgeInsets.all(24),
+              child: CircularProgressIndicator(strokeWidth: 2),
             ),
+          );
+        }
+
+        // Show managed folder headers + tree
+        return ListView.builder(
+          padding: const EdgeInsets.only(top: 8),
+          itemCount: nodes.length,
+          itemBuilder: (context, index) {
+            return _TreeNodeWidget(node: nodes[index], depth: 0);
+          },
+        );
+      },
       loading: () => const Center(
         child: Padding(
           padding: EdgeInsets.all(24),
           child: CircularProgressIndicator(strokeWidth: 2),
         ),
       ),
-      error: (e, _) => _EmptyTree(
+      error: (e, _) => _EmptyState(
         error: e.toString(),
         onAddFolder: () async {
           final result = await FilePicker.platform.getDirectoryPath();
@@ -626,41 +644,106 @@ class _FolderTreeContent extends ConsumerWidget {
   }
 }
 
-class _EmptyTree extends StatelessWidget {
+/// Empty state — shown when no folders are added.
+class _EmptyState extends StatelessWidget {
   final String? error;
   final VoidCallback onAddFolder;
-  const _EmptyTree({this.error, required this.onAddFolder});
+
+  const _EmptyState({this.error, required this.onAddFolder});
 
   @override
   Widget build(BuildContext context) {
     return Center(
-      child: Padding(
+      child: SingleChildScrollView(
         padding: const EdgeInsets.all(24),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            PhosphorIcon(
-              PhosphorIconsRegular.folderOpen,
-              size: 48,
-              color: AppColors.textMuted,
+            // Icon
+            Container(
+              width: 80,
+              height: 80,
+              decoration: BoxDecoration(
+                color: AppColors.accentSoft,
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: const Icon(
+                Icons.folder_open,
+                size: 40,
+                color: AppColors.accent,
+              ),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 24),
+            // Title
+            const Text(
+              'No Folders Added',
+              style: TextStyle(
+                color: AppColors.textPrimary,
+                fontSize: 20,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            const SizedBox(height: 12),
+            // Description
             Text(
-              error ?? 'No folders added',
-              style: TextStyle(color: AppColors.textMuted, fontSize: 14),
+              'Add folders containing Markdown files\nto start exploring your documentation.',
+              style: TextStyle(
+                color: AppColors.textMuted,
+                fontSize: 14,
+                height: 1.5,
+              ),
               textAlign: TextAlign.center,
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 8),
+            // Tip
+            Container(
+              padding: const EdgeInsets.all(12),
+              margin: const EdgeInsets.symmetric(horizontal: 8),
+              decoration: BoxDecoration(
+                color: AppColors.backgroundElevated,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: AppColors.borderSubtle),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.lightbulb_outline, size: 16, color: AppColors.warning),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Tip: Add specific project folders, not entire drives like C:\\',
+                      style: TextStyle(
+                        color: AppColors.textSecondary,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 24),
+            // Add folder button
             FilledButton.icon(
               onPressed: onAddFolder,
-              icon: const Icon(Icons.add, size: 16),
+              icon: const Icon(Icons.add, size: 18),
               label: const Text('Add Folder'),
               style: FilledButton.styleFrom(
                 backgroundColor: AppColors.accent,
                 foregroundColor: Colors.white,
-                minimumSize: const Size(140, 44),
+                minimumSize: const Size(180, 48),
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
               ),
             ),
+            const SizedBox(height: 12),
+            // Error message
+            if (error != null)
+              Padding(
+                padding: const EdgeInsets.only(top: 16),
+                child: Text(
+                  error!,
+                  style: const TextStyle(color: AppColors.error, fontSize: 12),
+                  textAlign: TextAlign.center,
+                ),
+              ),
           ],
         ),
       ),
@@ -668,7 +751,7 @@ class _EmptyTree extends StatelessWidget {
   }
 }
 
-/// File list content — used by all layouts.
+/// File list content — shared by all layouts.
 class _FileListContent extends ConsumerWidget {
   const _FileListContent();
 
@@ -758,7 +841,7 @@ class _FileListContent extends ConsumerWidget {
                       Text(
                         query.isNotEmpty
                             ? 'No files match "$query"'
-                            : 'No markdown files',
+                            : 'Select a folder to see files',
                         style: const TextStyle(
                             color: AppColors.textMuted, fontSize: 14),
                       ),
@@ -778,7 +861,6 @@ class _FileListContent extends ConsumerWidget {
                       child: InkWell(
                         onTap: () {
                           ref.read(selectedFileProvider.notifier).state = file;
-                          // On mobile, auto-navigate to viewer
                           if (AppBreakpoints.isCompact(context)) {
                             ref.read(uiProvider.notifier).navigateToViewer();
                           }
@@ -786,7 +868,7 @@ class _FileListContent extends ConsumerWidget {
                         borderRadius: BorderRadius.circular(8),
                         child: Container(
                           padding: const EdgeInsets.symmetric(
-                              horizontal: 12, vertical: 14), // 44px min height
+                              horizontal: 12, vertical: 14),
                           decoration: BoxDecoration(
                             borderRadius: BorderRadius.circular(8),
                             color: isSelected
@@ -862,7 +944,7 @@ class _FileListContent extends ConsumerWidget {
   }
 }
 
-/// Viewer content — used by all layouts.
+/// Viewer content — shared by all layouts.
 class _ViewerContent extends ConsumerWidget {
   final bool showBackButton;
   const _ViewerContent({this.showBackButton = false});
@@ -929,7 +1011,6 @@ class _ViewerContent extends ConsumerWidget {
                   overflow: TextOverflow.ellipsis,
                 ),
               ),
-              // Bookmark
               Consumer(
                 builder: (context, ref, _) {
                   final isBookmarked = ref.watch(bookmarksProvider).value
@@ -956,7 +1037,6 @@ class _ViewerContent extends ConsumerWidget {
                   );
                 },
               ),
-              // Fullscreen
               IconButton(
                 icon: const Icon(Icons.open_in_full, color: AppColors.textSecondary, size: 20),
                 onPressed: () {
@@ -964,7 +1044,6 @@ class _ViewerContent extends ConsumerWidget {
                 },
                 constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
               ),
-              // Close
               IconButton(
                 icon: const Icon(Icons.close, color: AppColors.textSecondary, size: 20),
                 onPressed: () {
@@ -1252,7 +1331,7 @@ class _FullscreenWrapper extends ConsumerWidget {
 }
 
 // ═══════════════════════════════════════════════════
-// FOLDER/FILE TREE WIDGETS (shared)
+// FOLDER/FILE TREE WIDGETS
 // ═══════════════════════════════════════════════════
 
 class _TreeNodeWidget extends ConsumerWidget {
@@ -1293,7 +1372,6 @@ class _FolderWidget extends ConsumerWidget {
               ref.read(currentFolderFilesProvider.notifier).state = node.children ?? [];
             }
           },
-          // 44px min touch target for mobile
           child: Container(
             padding: EdgeInsets.only(left: 8.0 + depth * 16, right: 8, top: 10, bottom: 10),
             child: Row(
@@ -1328,7 +1406,6 @@ class _FolderWidget extends ConsumerWidget {
                     overflow: TextOverflow.ellipsis,
                   ),
                 ),
-                // Bookmark star
                 Consumer(
                   builder: (context, ref, _) {
                     final isBookmarked = ref.watch(bookmarksProvider).value
@@ -1387,7 +1464,6 @@ class _FileWidget extends ConsumerWidget {
     return InkWell(
       onTap: () {
         ref.read(selectedFileProvider.notifier).state = node;
-        // On mobile, auto-navigate to viewer
         if (AppBreakpoints.isCompact(context)) {
           ref.read(uiProvider.notifier).navigateToViewer();
         }
