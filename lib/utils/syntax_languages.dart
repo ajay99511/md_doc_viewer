@@ -1,0 +1,54 @@
+import 'package:highlight/highlight.dart' as hl;
+import 'package:highlight/languages/dart.dart' as dart;
+import 'package:highlight/languages/javascript.dart' as js;
+import 'package:highlight/languages/python.dart' as python;
+import 'package:highlight/languages/typescript.dart' as ts;
+import 'package:highlight/languages/json.dart' as json;
+import 'package:highlight/languages/xml.dart' as xml;
+import 'package:highlight/languages/css.dart' as css;
+import 'package:highlight/languages/bash.dart' as bash;
+import 'package:highlight/languages/java.dart' as java;
+import 'package:highlight/languages/go.dart' as go;
+import 'package:highlight/languages/rust.dart' as rust;
+import 'package:highlight/languages/yaml.dart' as yaml;
+import 'package:highlight/languages/sql.dart' as sql;
+import 'package:highlight/languages/swift.dart' as swift;
+import 'package:highlight/languages/kotlin.dart' as kotlin;
+import 'package:highlight/languages/php.dart' as php;
+import 'package:highlight/languages/ruby.dart' as ruby;
+import 'package:highlight/languages/cpp.dart' as cpp;
+
+/// Register commonly used languages for syntax highlighting.
+void registerHighlightLanguages() {
+  hl.highlight.registerLanguage('dart', dart.dart);
+  hl.highlight.registerLanguage('js', js.javascript);
+  hl.highlight.registerLanguage('javascript', js.javascript);
+  hl.highlight.registerLanguage('python', python.python);
+  hl.highlight.registerLanguage('py', python.python);
+  hl.highlight.registerLanguage('typescript', ts.typescript);
+  hl.highlight.registerLanguage('ts', ts.typescript);
+  hl.highlight.registerLanguage('tsx', ts.typescript);
+  hl.highlight.registerLanguage('json', json.json);
+  hl.highlight.registerLanguage('xml', xml.xml);
+  hl.highlight.registerLanguage('html', xml.xml);
+  hl.highlight.registerLanguage('css', css.css);
+  hl.highlight.registerLanguage('bash', bash.bash);
+  hl.highlight.registerLanguage('sh', bash.bash);
+  hl.highlight.registerLanguage('java', java.java);
+  hl.highlight.registerLanguage('go', go.go);
+  hl.highlight.registerLanguage('rust', rust.rust);
+  hl.highlight.registerLanguage('yaml', yaml.yaml);
+  hl.highlight.registerLanguage('yml', yaml.yaml);
+  hl.highlight.registerLanguage('sql', sql.sql);
+  hl.highlight.registerLanguage('swift', swift.swift);
+  hl.highlight.registerLanguage('kotlin', kotlin.kotlin);
+  hl.highlight.registerLanguage('kt', kotlin.kotlin);
+  hl.highlight.registerLanguage('php', php.php);
+  hl.highlight.registerLanguage('ruby', ruby.ruby);
+  hl.highlight.registerLanguage('rb', ruby.ruby);
+  hl.highlight.registerLanguage('cpp', cpp.cpp);
+  hl.highlight.registerLanguage('c++', cpp.cpp);
+  hl.highlight.registerLanguage('cc', cpp.cpp);
+  hl.highlight.registerLanguage('h', cpp.cpp);
+  hl.highlight.registerLanguage('hpp', cpp.cpp);
+}
