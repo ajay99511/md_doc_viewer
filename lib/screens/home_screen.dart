@@ -571,6 +571,16 @@ class _AppHeader extends StatelessWidget {
             onPressed: onAddFolder,
             constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
           ),
+          IconButton(
+            icon: PhosphorIcon(
+              PhosphorIconsRegular.gear,
+              size: 18,
+              color: AppColors.textMuted,
+            ),
+            tooltip: 'Settings',
+            onPressed: onSettings,
+            constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
+          ),
         ],
       ),
     );

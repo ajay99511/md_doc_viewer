@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'dart:io' show Platform;
 import 'package:window_manager/window_manager.dart';
 import 'providers/providers.dart';
 import 'utils/constants.dart';
@@ -12,23 +13,36 @@ void main() async {
   // Register syntax highlighting languages
   registerHighlightLanguages();
 
-  // Window setup for desktop
-  await windowManager.ensureInitialized();
-  const windowOptions = WindowOptions(
-    size: Size(1200, 800),
-    minimumSize: Size(800, 600),
-    center: true,
-    backgroundColor: Colors.transparent,
-    skipTaskbar: false,
-    titleBarStyle: TitleBarStyle.normal,
-    title: 'MD Explorer',
-  );
-  windowManager.waitUntilReadyToShow(windowOptions, () async {
-    await windowManager.show();
-    await windowManager.focus();
-  });
+  // Window setup for desktop only (Windows, macOS, Linux)
+  if (Platform.isWindows || Platform.isMacOS || Platform.isLinux) {
+    await _initializeWindowManager();
+  }
 
   runApp(const ProviderScope(child: MDExplorerApp()));
+}
+
+/// Initialize window manager (desktop only)
+Future<void> _initializeWindowManager() async {
+  try {
+    final windowManager = WindowManager.instance;
+    await windowManager.ensureInitialized();
+    const windowOptions = WindowOptions(
+      size: Size(1200, 800),
+      minimumSize: Size(800, 600),
+      center: true,
+      backgroundColor: Colors.transparent,
+      skipTaskbar: false,
+      titleBarStyle: TitleBarStyle.normal,
+      title: 'MD Explorer',
+    );
+    windowManager.waitUntilReadyToShow(windowOptions, () async {
+      await windowManager.show();
+      await windowManager.focus();
+    });
+  } catch (e) {
+    // Ignore errors on non-desktop platforms
+    debugPrint('Window manager initialization skipped: $e');
+  }
 }
 
 class MDExplorerApp extends ConsumerWidget {
