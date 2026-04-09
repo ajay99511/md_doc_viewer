@@ -1,7 +1,13 @@
 {
   "permissions": {
     "allow": [
-      "Bash(flutter *)"
+      "Bash(flutter *)",
+      "Bash(del *)",
+      "WebSearch",
+      "WebFetch(stackoverflow.com)",
+      "WebFetch(pub.dev)",
+      "WebFetch(www.reddit.com)"
     ]
-  }
+  },
+  "$version": 3
 }

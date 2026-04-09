@@ -23,9 +23,11 @@ class FileTreeNotifier extends StateNotifier<AsyncValue<List<FileNode>>> {
   FileTreeNotifier() : super(const AsyncValue.data([]));
 
   /// Load all root folders (shallow listing — instant).
-  Future<void> loadRoots(List<String> rootFolders, AppSettings settings) async {
+  Future<void> loadRoots(List<String> rootFolders, AppSettings settings, {WidgetRef? ref}) async {
     if (rootFolders.isEmpty) {
       state = const AsyncValue.data([]);
+      // Also clear current folder files
+      ref?.read(currentFolderFilesProvider.notifier).state = [];
       return;
     }
 
@@ -51,10 +53,35 @@ class FileTreeNotifier extends StateNotifier<AsyncValue<List<FileNode>>> {
 
       state = AsyncValue.data(nodes);
 
+      // Populate currentFolderFilesProvider with all files from all roots
+      // This ensures the Files tab shows content immediately on mobile
+      if (ref != null) {
+        final allFiles = <FileNode>[];
+        for (final rootNode in nodes) {
+          if (rootNode.children.isNotEmpty) {
+            _collectFiles(rootNode.children, allFiles);
+          }
+        }
+        ref.read(currentFolderFilesProvider.notifier).state = allFiles;
+      }
+
       // Set up file watchers
       _setupWatchers(rootFolders);
     } catch (e, st) {
       state = AsyncValue.error(e, st);
+    }
+  }
+
+  /// Recursively collect all files from a list of nodes
+  void _collectFiles(List<FileNode> nodes, List<FileNode> accumulator) {
+    for (final node in nodes) {
+      if (node.isDirectory) {
+        if (node.children.isNotEmpty) {
+          _collectFiles(node.children, accumulator);
+        }
+      } else {
+        accumulator.add(node);
+      }
     }
   }
 
@@ -109,10 +136,10 @@ class FileTreeNotifier extends StateNotifier<AsyncValue<List<FileNode>>> {
   }
 
   /// Refresh all root folders (re-scan shallow).
-  Future<void> refresh(List<String> rootFolders, AppSettings settings) async {
+  Future<void> refresh(List<String> rootFolders, AppSettings settings, {WidgetRef? ref}) async {
     _fileService.clearCache();
     _expandedPaths.clear();
-    await loadRoots(rootFolders, settings);
+    await loadRoots(rootFolders, settings, ref: ref);
   }
 
   /// Navigate to a specific folder — returns its children for the file list panel.

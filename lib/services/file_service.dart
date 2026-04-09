@@ -5,13 +5,16 @@ import '../models/file_node.dart';
 
 /// File service using **shallow lazy listing** — never recursive.
 ///
-/// Model:
-/// 1. User explicitly adds root folders (e.g., `C:\Projects`, `D:\Docs`).
+/// Platform behavior:
+/// 1. User explicitly adds root folders (e.g., `C:\Projects`, `/storage/0/Documents`).
 /// 2. Each root folder is listed **shallow** (immediate children only).
-/// 3. Subdirectories are expanded on-demand — their children are listed
-///    shallowly at that moment.
-/// 4. No full-disk scan. No isolate. No blocking. Startup is instant.
+/// 3. Subdirectories are expanded on-demand — their children are listed shallowly.
+/// 4. No full-disk scan. No isolates. No blocking. Startup is instant.
 /// 5. LRU cache avoids redundant disk I/O for recently accessed folders.
+///
+/// Android note: file_picker uses Storage Access Framework (SAF).
+/// SAF grants URI permissions via system picker — no manifest permissions needed.
+/// file_picker resolves SAF URIs to real paths that dart:io can access.
 class FileService {
   final Map<String, _CacheEntry> _cache = {};
   static const _cacheMaxAge = Duration(seconds: 60);
@@ -52,7 +55,7 @@ class FileService {
 
         try {
           if (entity is Directory) {
-            // Skip Windows system directories that always fail
+            // Skip protected system directories
             if (_isProtectedSystemDirectory(entity.path)) continue;
 
             // Quick check: does this folder have .md files (shallow, max 1 sublevel)?
@@ -167,11 +170,14 @@ class FileService {
     RegExp(r'^[A-Za-z]:\\Recovery($|\\)', caseSensitive: false),
     RegExp(r'^[A-Za-z]:\\Boot($|\\)', caseSensitive: false),
     RegExp(r'^[A-Za-z]:\\Config\.Msi($|\\)', caseSensitive: false),
+    // Android system directories
+    RegExp(r'^/storage/.*?/Android($|/)'),
+    RegExp(r'^/data/'),
+    RegExp(r'^/system/'),
   ];
 
   static bool _isProtectedSystemDirectory(String path) {
-    final normalized = path.replaceAll('/', r'\');
-    return _protectedPatterns.any((pattern) => pattern.hasMatch(normalized));
+    return _protectedPatterns.any((pattern) => pattern.hasMatch(path));
   }
 
   // ─── Private: Shallow markdown detection ───
@@ -243,3 +249,4 @@ class _CacheEntry {
   final DateTime timestamp;
   _CacheEntry(this.children, this.timestamp);
 }
+

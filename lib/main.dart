@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show kIsWeb, defaultTargetPlatform;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'dart:io' show Platform;
 import 'package:window_manager/window_manager.dart';
 import 'providers/providers.dart';
 import 'utils/constants.dart';
@@ -14,7 +14,9 @@ void main() async {
   registerHighlightLanguages();
 
   // Window setup for desktop only (Windows, macOS, Linux)
-  if (Platform.isWindows || Platform.isMacOS || Platform.isLinux) {
+  if (!kIsWeb && (defaultTargetPlatform == TargetPlatform.windows ||
+      defaultTargetPlatform == TargetPlatform.macOS ||
+      defaultTargetPlatform == TargetPlatform.linux)) {
     await _initializeWindowManager();
   }
 

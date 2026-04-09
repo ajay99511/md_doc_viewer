@@ -18,32 +18,34 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   @override
   void initState() {
     super.initState();
-    // Auto-loadRoots configured folders on settings open
-    _autoScan();
-  }
-
-  void _autoScan() {
-    final settings = ref.read(settingsProvider);
-    if (settings.rootFolders.isNotEmpty) {
-      ref.read(fileTreeProvider.notifier).loadRoots(settings.rootFolders, settings);
-    }
+    // No auto-scan needed - folders are loaded on app startup
+    // Only reload when user makes changes (add/remove/refresh)
   }
 
   Future<void> _addFolder() async {
     final result = await FilePicker.platform.getDirectoryPath();
-    if (result != null) {
+    if (result != null && mounted) {
       await ref.read(settingsProvider.notifier).addRootFolder(result);
-      // Re-loadRoots
+      // Reload tree with new folder
       final settings = ref.read(settingsProvider);
-      ref.read(fileTreeProvider.notifier).loadRoots(settings.rootFolders, settings);
+      if (mounted) {
+        ref.read(fileTreeProvider.notifier).loadRoots(settings.rootFolders, settings, ref: ref);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Folder added: ${result.split('/').last}'),
+            duration: const Duration(seconds: 2),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
     }
   }
 
   Future<void> _removeFolder(String path) async {
     await ref.read(settingsProvider.notifier).removeRootFolder(path);
-    // Re-loadRoots remaining folders
+    // Reload tree with remaining folders
     final settings = ref.read(settingsProvider);
-    ref.read(fileTreeProvider.notifier).loadRoots(settings.rootFolders, settings);
+    ref.read(fileTreeProvider.notifier).loadRoots(settings.rootFolders, settings, ref: ref);
   }
 
   @override
@@ -129,14 +131,25 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           const SizedBox(height: 12),
           FilledButton.icon(
             onPressed: () {
+              if (settings.rootFolders.isEmpty) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('No folders added yet'),
+                    duration: Duration(seconds: 2),
+                    behavior: SnackBarBehavior.floating,
+                  ),
+                );
+                return;
+              }
               ref.read(fileTreeProvider.notifier).refresh(
                     settings.rootFolders,
                     settings,
                   );
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(
-                  content: Text('Folders refreshed'),
+                  content: Text('Folders refreshed successfully'),
                   duration: Duration(seconds: 2),
+                  behavior: SnackBarBehavior.floating,
                 ),
               );
             },
