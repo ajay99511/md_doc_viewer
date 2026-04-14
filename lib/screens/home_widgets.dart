@@ -688,9 +688,34 @@ class _BookmarkSection extends ConsumerWidget {
                   return InkWell(
                     key: ValueKey(bm.path),
                     onTap: () async {
+                      final path = bm.path;
+                      final fileEntity = File(path);
+                      
+                      // Check if it's a file (markdown document)
+                      if (await fileEntity.exists()) {
+                        final ext = p.extension(path).replaceAll('.', '').toLowerCase();
+                        const markdownExts = {'md', 'markdown', 'mdx', 'txt'};
+                        
+                        if (markdownExts.contains(ext)) {
+                          // It's a markdown file - open in viewer
+                          final fileNode = FileNode(
+                            path: path,
+                            name: p.basename(path),
+                            isDirectory: false,
+                            lastModified: await fileEntity.lastModified(),
+                          );
+                          ref.read(selectedFileProvider.notifier).state = fileNode;
+                          if (context.mounted && AppBreakpoints.isCompact(context)) {
+                            ref.read(uiProvider.notifier).setMobilePanel(MobilePanel.viewer);
+                          }
+                          return;
+                        }
+                      }
+                      
+                      // It's a directory - list its contents
                       final settings = ref.read(settingsProvider);
                       final files = await ref.read(fileServiceProvider).listDirectory(
-                            bm.path,
+                            path,
                             allowedExtensions: Set<String>.from(settings.allowedExtensions),
                             showHidden: settings.showHiddenFiles,
                           );
@@ -912,13 +937,19 @@ class _FolderWidget extends ConsumerWidget {
     return Column(
       children: [
         InkWell(
-          onTap: () {
-            ref.read(fileTreeProvider.notifier).toggleExpand(
+          onTap: () async {
+            final appSettings = ref.read(settingsProvider);
+            await ref.read(fileTreeProvider.notifier).toggleExpand(
                   node.path,
-                  ref.read(settingsProvider),
+                  appSettings,
                 );
-            if (node.children?.isNotEmpty ?? false) {
-              ref.read(currentFolderFilesProvider.notifier).state = node.children ?? [];
+            if (context.mounted) {
+              final files = await ref.read(fileServiceProvider).listDirectory(
+                node.path,
+                allowedExtensions: Set<String>.from(appSettings.allowedExtensions),
+                showHidden: appSettings.showHiddenFiles,
+              );
+              ref.read(currentFolderFilesProvider.notifier).state = files;
             }
           },
           child: Container(

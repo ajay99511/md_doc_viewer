@@ -240,6 +240,20 @@ class _MobileLayout extends ConsumerWidget {
             },
           ),
           IconButton(
+            icon: PhosphorIcon(
+              PhosphorIconsRegular.books,
+              size: 22,
+              color: AppColors.textSecondary,
+            ),
+            tooltip: 'My Library',
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const MdLibraryScreen()),
+              );
+            },
+          ),
+          IconButton(
             icon: const Icon(Icons.settings_outlined, color: AppColors.textSecondary),
             onPressed: () {
               Navigator.push(
