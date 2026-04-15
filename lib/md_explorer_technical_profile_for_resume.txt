@@ -1,0 +1,258 @@
+# MD Explorer — Project Technical Profile for Resume
+
+## Project Overview
+**MD Explorer** is a fast, offline-first Markdown file explorer and viewer built with Flutter, designed for desktop and mobile platforms. It enables users to browse local markdown files, organize them into collections, import files into a personal library, and render them with full GitHub Flavored Markdown (GFM) support — all without requiring network connectivity.
+
+---
+
+## Technologies & Frameworks
+
+| Category | Technology | Version |
+|---|---|---|
+| **Language** | Dart | ^3.11.0 |
+| **Framework** | Flutter | (implicit, latest stable) |
+| **State Management** | Riverpod (flutter_riverpod) | ^2.6.1 |
+| **Code Generation** | Riverpod Generator + build_runner | ^2.6.3 / ^2.4.14 |
+| **Markdown Parsing** | markdown (GFM extension set) | ^7.3.0 |
+| **Markdown Rendering** | flutter_markdown_plus | ^1.0.2 |
+| **Syntax Highlighting** | flutter_highlight + highlight | ^0.7.0 |
+| **Persistence** | SharedPreferences | ^2.5.3 |
+| **File System** | dart:io + file_picker + watcher | ^10.3.9 / ^1.1.4 |
+| **Responsive Layout** | Custom breakpoint system + responsive_framework (declared) | ^1.5.1 |
+| **Window Management** | window_manager (desktop) | ^0.4.3 |
+| **Permissions** | permission_handler (Android) | ^12.0.1 |
+| **Icons** | Lucide Icons + Phosphor Flutter + Cupertino Icons | ^0.257.0 / ^2.1.0 / ^1.0.8 |
+| **Linting** | flutter_lints | ^6.0.0 |
+| **Testing** | flutter_test | (SDK) |
+
+---
+
+## Architecture Patterns
+
+### Layered MVVM Architecture
+```
+Models (Data Layer) → Services (Business Logic + Persistence) → Riverpod Providers (State Bridge) → Screens/Widgets (Presentation Layer)
+```
+
+- **Model-View-ViewModel (MVVM)** separation with Riverpod as the reactive state bridge
+- **Service Layer Pattern**: Stateless, long-lived service classes encapsulating all I/O, persistence, and file-watching logic
+- **Repository-like Providers**: Riverpod providers wrap services and expose state as `AsyncValue<T>` for unified loading/error/data handling
+- **Consumer Widget Pattern**: All UI components extend `ConsumerWidget` or `ConsumerStatefulWidget` for reactive Riverpod consumption
+
+### Reactive State Management (Riverpod)
+- **StateNotifierProvider**: Manages all mutable state (settings, bookmarks, file tree, UI state, lists, imported files)
+- **StateProvider**: Lightweight reactive state (selected file, current folder files)
+- **FutureProvider.autoDispose**: Auto-disposing async file content loading with automatic memory release on selection change
+- **Provider**: Read-only singleton service injection
+- **AsyncValue Pattern**: Consistent `when(data/loading/error)` pattern across all UI layers
+
+### Responsive Design Architecture
+- **Three-tier breakpoint system**: Mobile (<600px), Tablet (600–1024px), Desktop (>1024px)
+- **Platform-aware layout**: Desktop uses 3-panel row layout (sidebar + file list + viewer), Tablet uses 2-panel with toggle, Mobile uses single panel with bottom navigation + drawer
+- **Custom breakpoint utilities**: `AppBreakpoints`, `LayoutMode` enum, `AppPlatform` detection (isDesktop, isMobile, hasMouse)
+
+---
+
+## Data Models
+
+| Model | Purpose | Key Fields |
+|---|---|---|
+| **FileNode** | Recursive tree node for file/directory representation | path, name, isDirectory, children, isExpanded, lastModified, size |
+| **Bookmark** | User-starred folders/files for quick access | id, path, label, order, createdAt |
+| **AppSettings** | Centralized application preferences | themeMode, markdownFontSize, rootFolders, allowedExtensions, showHiddenFiles, sidebarWidth, fileListWidth |
+| **FileList** | User-defined folder collections ("playlist for folders") | id, name, description, folderPaths, createdAt, updatedAt |
+| **ImportedFile** | Imported markdown files in internal app storage | id, originalName, storedPath, importedAt, fileSize |
+
+- **Immutable data classes** with `fromJson`/`toJson` serialization and `copyWith` methods
+- **Path-based equality** for consistent identity checks
+- **Computed properties**: `extension`, `isMarkdown`, `isSupportedFile`
+
+---
+
+## Core Services
+
+| Service | Responsibility |
+|---|---|
+| **FileService** | Directory listing, file reading, LRU caching, protected directory detection, shallow markdown folder scanning |
+| **WatcherService** | Real-time directory change detection via `DirectoryWatcher`, broadcast streams, subscription lifecycle management |
+| **BookmarkService** | Bookmark CRUD, reorder, label management, duplicate prevention, JSON persistence |
+| **ImportService** | File import via system picker, copy to internal storage, name deduplication, batch delete, library persistence |
+| **ListService** | File list (collection) CRUD, folder add/remove, query by folder path, JSON persistence |
+
+---
+
+## Key Engineering Decisions & Best Practices
+
+### Performance Optimizations
+1. **Shallow Lazy Loading**: No recursive directory scanning at startup. Subdirectories loaded on-demand when user expands them — instant startup regardless of folder size
+2. **LRU Cache**: In-memory directory listing cache (500 entries, 60s TTL) with path-prefix-based invalidation on file system changes
+3. **Quick Markdown Detection**: `_folderHasMarkdownShallow()` checks only immediate + one sublevel for .md files, avoiding expensive full recursion
+4. **AutoDispose Pattern**: `FutureProvider.autoDispose` releases file content memory when selection changes
+5. **Parallel Root Loading**: `Future.wait()` loads all root folders concurrently
+6. **Deferred Startup**: `addPostFrameCallback` defers folder loading until after first frame, preventing jank
+7. **Error-per-Entity Isolation**: Individual inaccessible files/directories are skipped rather than failing entire operations
+
+### Error Handling
+- **Graceful Degradation**: All service methods return empty collections/null on failure rather than throwing
+- **AsyncValue Propagation**: Errors flow through `AsyncValue.error(e, st)` to UI for consistent display
+- **Protected Directory Detection**: System directories (Windows/, Program Files/, Android/, /data/, /system/) detected via regex and skipped preemptively
+- **Batch Import Resilience**: Individual file import failures are skipped without aborting the entire batch
+
+### Cross-Platform Compatibility
+- **Android Scoped Storage**: Imported files copied to internal app storage (`md_library/`) to survive SAF permission revocation
+- **Android 10–13+ Compatibility**: `requestLegacyExternalStorage` for Android 10, `enableOnBackInvokedCallback` for Android 13+ back gesture
+- **Desktop Window Management**: Conditional `window_manager` initialization (Windows/macOS/Linux only), skipped on mobile/web via `kIsWeb` + `defaultTargetPlatform` checks
+- **Runtime Permissions**: `permission_handler` for Android `READ_EXTERNAL_STORAGE` and `MANAGE_EXTERNAL_STORAGE`
+
+### Code Quality
+- **flutter_lints** with strict default rules, zero custom overrides
+- **Riverpod code generation** tooling available (`riverpod_generator` + `build_runner`)
+- **Type-safe models** with explicit serialization/deserialization
+- **Immutable state updates** via `copyWith` pattern throughout
+
+---
+
+## UI/UX Features
+
+### Theming
+- **Material 3** with custom color system (15+ semantic color tokens)
+- **Three theme modes**: Light, Dark, System (user-selectable via segmented button)
+- **Dark-first design**: Deep navy base palette (#0A0E17) with carefully tuned surface/elevated/hover variants
+- **Dynamic font sizing**: User-adjustable markdown font size (10–24px, persisted)
+
+### Markdown Rendering
+- **Full GFM Support**: GitHub Flavored Markdown extension set
+- **Syntax Highlighting**: 20+ languages registered (Dart, JS, TS, Python, Rust, Go, Java, C++, etc.)
+- **Custom Stylesheet**: Complete `MarkdownStyleSheet` with GitHub-style typography (headings, code blocks, blockquotes, tables, links, strikethrough)
+
+### Navigation & Interaction
+- **Responsive layouts**: Desktop (3-panel), Tablet (2-panel toggle), Mobile (bottom nav + drawer)
+- **Fullscreen mode**: Dedicated fullscreen viewer with font size controls
+- **Bookmark system**: Star folders/files, reorderable bookmark list with drag handles
+- **File Lists**: User-defined folder collections with rename/delete context menus
+- **Search & Sort**: File list search, 5 sort modes (name, date, size, etc.)
+- **Swipe-to-delete**: Dismissible file cards with confirmation dialog
+- **Multi-select mode**: Long-press for bulk file deletion
+- **Pull-to-refresh**: Manual file tree reload via RefreshIndicator
+
+---
+
+## Persistence Layer
+
+**No database — SharedPreferences for all persistence:**
+
+| Key | Data Type | Purpose |
+|---|---|---|
+| `themeMode` | String | Theme preference (light/dark/system) |
+| `markdownFontSize` | double | Reader font size |
+| `rootFolders` | List\<String\> | Configured root directory paths |
+| `allowedExtensions` | List\<String\> | File type filter (.md, .markdown, .mdx, .txt, .rst) |
+| `showHiddenFiles` | bool | Hidden files visibility toggle |
+| `sidebarWidth` / `fileListWidth` | double | Panel width preferences |
+| `bookmarks` | JSON string | Serialized bookmark list |
+| `file_lists` | JSON string | Serialized file list collections |
+| `md_library_imported_files` | JSON string | Serialized imported file metadata |
+
+---
+
+## Business Functionality
+
+1. **Local Markdown Browsing**: Navigate local file systems, browse folders, preview markdown files
+2. **Markdown Library**: Import external .md files into a personal, app-managed library with persistence
+3. **Folder Collections**: Organize folders into named lists ("playlists") for project-based organization
+4. **Bookmarking**: Star frequently-accessed folders/files for instant navigation
+5. **Offline-First**: Zero network dependencies — all parsing, rendering, and persistence is local
+6. **Cross-Platform**: Single codebase targeting Windows, macOS, Linux, Android, iOS
+
+---
+
+## Resume Bullet Points (Ready to Use)
+
+### For "Technical Skills" Section
+- **Languages & Frameworks**: Dart, Flutter, Riverpod (State Management), Material 3
+- **State Management**: Riverpod (StateNotifierProvider, FutureProvider, AutoDispose, AsyncValue pattern)
+- **Architecture**: MVVM, Service Layer Pattern, Reactive Programming, Immutable State Management
+- **Persistence**: SharedPreferences, JSON Serialization, LRU Caching, File I/O (dart:io)
+- **UI/UX**: Responsive Design (3-tier breakpoints), Custom Theming, Markdown Rendering (GFM), Syntax Highlighting
+- **Platform**: Cross-platform (Windows, macOS, Linux, Android, iOS), Android Scoped Storage, Desktop Window Management
+- **Tools**: flutter_lints, build_runner, Riverpod Generator, file_picker, watcher
+
+### For "Projects" Section — Bullet Points
+
+**MD Explorer** — *Flutter · Riverpod · Offline Markdown Explorer*
+- Architected an offline-first Markdown file explorer and viewer using Flutter and Riverpod, supporting desktop and mobile platforms with zero network dependencies
+- Designed a layered MVVM architecture with Service Layer pattern, separating data models, business logic, reactive state providers, and presentation layers for maintainable codebase
+- Implemented shallow lazy-loading file tree with LRU cache (500 entries, 60s TTL), enabling instant app startup regardless of directory size and eliminating redundant disk I/O
+- Built reactive state management using Riverpod (StateNotifierProvider, FutureProvider.autoDispose, AsyncValue pattern) for unified loading/error/data handling across all UI components
+- Developed responsive three-tier layout system (Mobile <600px, Tablet 600–1024px, Desktop >1024px) with platform-aware layouts: 3-panel desktop, 2-panel tablet, single-panel mobile with bottom navigation
+- Engineered real-time directory watching via broadcast streams (`StreamController<String>`) with automatic cache invalidation by path prefix and graceful permission error handling
+- Implemented full GitHub Flavored Markdown (GFM) rendering with custom stylesheet and syntax highlighting for 20+ languages using flutter_highlight
+- Designed cross-platform file import system that copies external files to internal app storage (`md_library/`), ensuring Android Scoped Storage compatibility and Surviving SAF permission revocation
+- Built comprehensive bookmark and file list (collection) systems with JSON persistence via SharedPreferences, enabling users to star folders and organize directories into named playlists
+- Applied performance optimizations including parallel root folder loading (`Future.wait`), deferred startup via `addPostFrameCallback`, AutoDispose memory management, and error-per-entity isolation
+- Configured Android compatibility layer (Android 10–13+) with `requestLegacyExternalStorage`, `enableOnBackInvokedCallback`, and runtime permission handling for `MANAGE_EXTERNAL_STORAGE`
+- Established code quality standards using flutter_lints with strict rules, immutable data models with `copyWith` pattern, and type-safe JSON serialization across all entities
+
+### For "Key Achievements" or "Highlights" Section
+- **Performance**: Achieved instant startup time by implementing shallow lazy-loading (no recursive directory scanning) and LRU-cached directory listings, handling arbitrarily large folder trees without degradation
+- **Cross-Platform**: Single Flutter codebase targeting 5 platforms (Windows, macOS, Linux, Android, iOS) with platform-specific optimizations (desktop window management, Android Scoped Storage, conditional initialization)
+- **Offline-First Design**: Zero network dependencies — all markdown parsing, syntax highlighting, file browsing, and data persistence operates entirely offline
+- **User Experience**: Full Material 3 theming with custom 15+ color token system, dynamic font sizing, fullscreen mode, searchable/sortable file lists, and drag-reorderable bookmarks
+
+### For "Architecture & Design Patterns" Section
+- **MVVM Architecture**: Models → Services → Riverpod Providers → Screens/Widgets with strict unidirectional data flow
+- **Service Layer Pattern**: Stateless services (FileService, WatcherService, BookmarkService, ImportService, ListService) encapsulating all I/O and business logic
+- **Reactive State Management**: Riverpod providers exposing `AsyncValue<T>` for consistent async state handling across UI
+- **LRU Cache Pattern**: In-memory cache with TTL, max capacity, and path-prefix invalidation for file system operations
+- **AutoDispose Pattern**: Automatic memory release for file content providers when user selection changes
+- **Error-per-Entity Isolation**: Individual file/folder access failures gracefully skipped without aborting batch operations
+- **Immutable State Updates**: All model mutations via `copyWith` pattern, ensuring predictable state transitions
+
+### For "Technical Challenges Solved" Section
+- **Large Directory Performance**: Solved slow startup on folders with thousands of files by replacing recursive directory listing with shallow lazy-loading + on-demand expansion
+- **Android Scoped Storage**: Resolved file access persistence on Android by implementing copy-to-internal-storage strategy, decoupling app functionality from external storage permissions
+- **Real-Time File Sync**: Implemented directory watcher system with broadcast streams and intelligent cache invalidation, keeping UI in sync with file system changes without polling
+- **Cross-Platform Window Management**: Handled desktop vs mobile differences by conditionally initializing `window_manager` based on `kIsWeb` and `defaultTargetPlatform` checks
+
+---
+
+## Suggested Resume Structure
+
+```
+[Your Name]
+[Contact Information]
+[GitHub Link] | [Portfolio Link] | [LinkedIn]
+
+SUMMARY
+- 2-3 lines about your focus (Flutter development, cross-platform apps, etc.)
+
+TECHNICAL SKILLS
+- Languages: Dart, (others...)
+- Frameworks: Flutter, Riverpod, Material 3
+- Architecture: MVVM, Service Layer Pattern, Reactive Programming
+- Tools: Git, flutter_lints, build_runner
+- Platforms: Windows, macOS, Linux, Android, iOS
+
+PROJECTS
+
+MD Explorer — Flutter Markdown Explorer
+[Use 6-8 bullets from the "For Projects Section" above, tailored to space]
+
+[Other Projects...]
+
+EDUCATION
+[Your degree, university, graduation date]
+
+CERTIFICATIONS / AWARDS
+[Any relevant certifications, hackathons, etc.]
+```
+
+---
+
+## Notes for Resume Customization
+
+1. **Prioritize by role**: For Flutter-specific roles, emphasize Riverpod, responsive design, and cross-platform work. For generalist roles, emphasize architecture, performance, and problem-solving.
+2. **Quantify where possible**: Add metrics if available (e.g., "handled 10,000+ file trees", "startup time < 200ms", "supporting 5 platforms from single codebase").
+3. **Tailor bullet count**: Use 4-6 bullets for a single project on a resume; save the rest for interviews.
+4. **Action verbs**: All bullets start with strong action verbs (Architected, Designed, Implemented, Engineered, Developed, Built, Applied, Configured, Established).
+5. **STAR format implied**: Each bullet contains Situation/Task (the problem), Action (what you did), and Result (the benefit) in compressed form.
