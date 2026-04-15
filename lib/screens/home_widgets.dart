@@ -950,6 +950,10 @@ class _FolderWidget extends ConsumerWidget {
                 showHidden: appSettings.showHiddenFiles,
               );
               ref.read(currentFolderFilesProvider.notifier).state = files;
+              // On mobile, auto-switch to the Files panel so the user sees them
+              if (context.mounted && AppBreakpoints.isCompact(context)) {
+                ref.read(uiProvider.notifier).setMobilePanel(MobilePanel.files);
+              }
             }
           },
           child: Container(

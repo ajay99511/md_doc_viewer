@@ -144,6 +144,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               ref.read(fileTreeProvider.notifier).refresh(
                     settings.rootFolders,
                     settings,
+                    ref: ref,
                   );
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(

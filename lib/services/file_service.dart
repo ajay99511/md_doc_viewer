@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:path/path.dart' as p;
 import '../models/file_node.dart';
 
@@ -98,6 +99,7 @@ class FileService {
       _putCache(cacheKey, children);
       return children;
     } catch (e) {
+      debugPrint('[FileService] listDirectory failed for "$directoryPath": $e');
       return [];
     }
   }
