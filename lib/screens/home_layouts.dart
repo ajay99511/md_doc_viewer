@@ -29,12 +29,18 @@ class _DesktopLayout extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    return Row(
-      children: [
-        _DesktopSidebar(ref: ref),
-        _DesktopFileList(ref: ref),
-        _DesktopViewer(ref: ref),
-      ],
+    return Padding(
+      padding: const EdgeInsets.all(24.0),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          GlassPanel(child: _DesktopSidebar(ref: ref)),
+          const SizedBox(width: 24),
+          GlassPanel(child: _DesktopFileList(ref: ref)),
+          const SizedBox(width: 24),
+          Expanded(child: GlassPanel(withGlow: true, child: _DesktopViewer(ref: ref))),
+        ],
+      ),
     );
   }
 }
@@ -45,12 +51,8 @@ class _DesktopSidebar extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef _) {
-    return Container(
+    return SizedBox(
       width: 280,
-      decoration: BoxDecoration(
-        color: AppColors.backgroundSurface,
-        border: Border(right: BorderSide(color: AppColors.borderSubtle)),
-      ),
       child: Column(
         children: [
           _AppHeader(
@@ -97,12 +99,8 @@ class _DesktopFileList extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef _) {
-    return Container(
+    return SizedBox(
       width: 320,
-      decoration: BoxDecoration(
-        color: AppColors.backgroundBase,
-        border: Border(right: BorderSide(color: AppColors.borderSubtle)),
-      ),
       child: const _FileListContent(),
     );
   }
@@ -114,7 +112,7 @@ class _DesktopViewer extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef _) {
-    return const Expanded(child: _ViewerContent());
+    return const _ViewerContent();
   }
 }
 
@@ -129,56 +127,62 @@ class _TabletLayout extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final selectedFile = ref.watch(selectedFileProvider);
 
-    return Row(
-      children: [
-        Container(
-          width: 240,
-          decoration: BoxDecoration(
-            color: AppColors.backgroundSurface,
-            border: Border(right: BorderSide(color: AppColors.borderSubtle)),
-          ),
-          child: Column(
-            children: [
-              _AppHeader(
-                onRefresh: () => ref.read(fileTreeProvider.notifier).refresh(
-                      ref.read(settingsProvider).rootFolders,
-                      ref.read(settingsProvider),
-                      ref: ref,
-                    ),
-                onAddFolder: () async {
-                  final result = await FilePicker.platform.getDirectoryPath();
-                  if (result != null) {
-                    await ref.read(settingsProvider.notifier).addRootFolder(result);
-                    ref.read(fileTreeProvider.notifier).loadRoots(
+    return Padding(
+      padding: const EdgeInsets.all(16.0),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          GlassPanel(
+            child: SizedBox(
+              width: 260,
+              child: Column(
+                children: [
+                  _AppHeader(
+                    onRefresh: () => ref.read(fileTreeProvider.notifier).refresh(
                           ref.read(settingsProvider).rootFolders,
                           ref.read(settingsProvider),
                           ref: ref,
-                        );
-                  }
-                },
-                onSettings: () => Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const SettingsScreen()),
-                ),
+                        ),
+                    onAddFolder: () async {
+                      final result = await FilePicker.platform.getDirectoryPath();
+                      if (result != null) {
+                        await ref.read(settingsProvider.notifier).addRootFolder(result);
+                        ref.read(fileTreeProvider.notifier).loadRoots(
+                              ref.read(settingsProvider).rootFolders,
+                              ref.read(settingsProvider),
+                              ref: ref,
+                            );
+                      }
+                    },
+                    onSettings: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const SettingsScreen()),
+                    ),
+                  ),
+                  Expanded(
+                    child: Column(
+                      children: [
+                        Expanded(child: const _FolderTreeContent()),
+                        const _BookmarkSection(),
+                        const ListSection(),
+                      ],
+                    ),
+                  ),
+                ],
               ),
-              Expanded(
-                child: Column(
-                  children: [
-                    Expanded(child: const _FolderTreeContent()),
-                    const _BookmarkSection(),
-                    const ListSection(),
-                  ],
-                ),
-              ),
-            ],
+            ),
           ),
-        ),
-        Expanded(
-          child: selectedFile == null
-              ? const _FileListContent()
-              : _ViewerContent(showBackButton: true),
-        ),
-      ],
+          const SizedBox(width: 16),
+          Expanded(
+            child: GlassPanel(
+              withGlow: selectedFile != null,
+              child: selectedFile == null
+                  ? const _FileListContent()
+                  : const _ViewerContent(showBackButton: true),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -196,9 +200,9 @@ class _MobileLayout extends ConsumerWidget {
     final selectedFile = ref.watch(selectedFileProvider);
 
     return Scaffold(
-      backgroundColor: AppColors.backgroundBase,
+      backgroundColor: Colors.transparent,
       appBar: AppBar(
-        backgroundColor: AppColors.backgroundSurface,
+        backgroundColor: Colors.black.withValues(alpha: 0.2),
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.menu, color: AppColors.textPrimary),
@@ -299,7 +303,7 @@ class _MobileDrawer extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return Drawer(
-      backgroundColor: AppColors.backgroundSurface,
+      backgroundColor: Colors.black.withValues(alpha: 0.8),
       child: SafeArea(
         child: Column(
           children: [
@@ -308,17 +312,18 @@ class _MobileDrawer extends ConsumerWidget {
               child: Row(
                 children: [
                   PhosphorIcon(
-                    PhosphorIconsRegular.notebook,
+                    PhosphorIconsRegular.cpu, // Updated icon
                     size: 24,
                     color: AppColors.accent,
                   ),
                   const SizedBox(width: 12),
                   const Text(
-                    'MD Explorer',
+                    'NEXUS DB',
                     style: TextStyle(
                       color: AppColors.textPrimary,
-                      fontSize: 18,
+                      fontSize: 16,
                       fontWeight: FontWeight.w700,
+                      letterSpacing: 2.0,
                     ),
                   ),
                   const Spacer(),
@@ -369,7 +374,7 @@ class _MobileBottomNav extends ConsumerWidget {
     final hasViewer = selectedFile != null;
 
     return NavigationBar(
-      backgroundColor: AppColors.backgroundSurface,
+      backgroundColor: Colors.black.withValues(alpha: 0.5),
       indicatorColor: AppColors.accentSoft,
       selectedIndex: switch (uiState.activeMobilePanel) {
         MobilePanel.tree => 0,

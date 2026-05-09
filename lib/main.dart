@@ -72,9 +72,9 @@ class MDExplorerApp extends ConsumerWidget {
       colorScheme: colorScheme,
       brightness: brightness,
       useMaterial3: true,
-      scaffoldBackgroundColor: isDark ? AppColors.backgroundBase : const Color(0xFFF8FAFC),
+      scaffoldBackgroundColor: isDark ? Colors.transparent : const Color(0xFFF8FAFC),
       appBarTheme: AppBarTheme(
-        backgroundColor: isDark ? AppColors.backgroundSurface : Colors.white,
+        backgroundColor: isDark ? Colors.transparent : Colors.white,
         elevation: 0,
         iconTheme: IconThemeData(color: isDark ? AppColors.textPrimary : Colors.black87),
       ),

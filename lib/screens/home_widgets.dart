@@ -24,18 +24,22 @@ class _AppHeader extends StatelessWidget {
       child: Row(
         children: [
           PhosphorIcon(
-            PhosphorIconsRegular.notebook,
+            PhosphorIconsRegular.cpu,
             size: 20,
             color: AppColors.accent,
           ),
           const SizedBox(width: 10),
           Flexible(
             child: Text(
-              'MD Explorer',
-              style: const TextStyle(
-                color: AppColors.textPrimary,
-                fontSize: 16,
-                fontWeight: FontWeight.w700,
+              'NEXUS DB',
+              style: TextStyle(
+                color: AppColors.accentHover,
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+                letterSpacing: 2.0,
+                shadows: [
+                  Shadow(color: AppColors.accent.withValues(alpha: 0.5), blurRadius: 8),
+                ],
               ),
               overflow: TextOverflow.ellipsis,
               maxLines: 1,
@@ -329,11 +333,18 @@ class _FileListContent extends ConsumerWidget {
           ),
         ),
         Container(
-          margin: const EdgeInsets.fromLTRB(12, 0, 12, 8),
+          margin: const EdgeInsets.fromLTRB(12, 0, 12, 16),
           decoration: BoxDecoration(
-            color: AppColors.backgroundElevated,
-            borderRadius: BorderRadius.circular(8),
+            color: Colors.black.withValues(alpha: 0.4),
+            borderRadius: BorderRadius.circular(12),
             border: Border.all(color: AppColors.borderSubtle),
+            boxShadow: [
+              BoxShadow(
+                color: AppColors.accentHover.withValues(alpha: 0.1),
+                blurRadius: 10,
+                spreadRadius: 1,
+              ),
+            ],
           ),
           child: Row(
             children: [
@@ -404,7 +415,7 @@ class _FileListContent extends ConsumerWidget {
                     final isSelected = selectedFile?.path == file.path;
 
                     return Padding(
-                      padding: const EdgeInsets.only(bottom: 2),
+                      padding: const EdgeInsets.only(bottom: 8),
                       child: InkWell(
                         onTap: () {
                           ref.read(selectedFileProvider.notifier).state = file;
@@ -412,63 +423,101 @@ class _FileListContent extends ConsumerWidget {
                             ref.read(uiProvider.notifier).navigateToViewer();
                           }
                         },
-                        borderRadius: BorderRadius.circular(8),
+                        borderRadius: BorderRadius.circular(16),
                         child: Container(
                           padding: const EdgeInsets.symmetric(
-                              horizontal: 12, vertical: 14),
+                              horizontal: 16, vertical: 14),
                           decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(8),
+                            borderRadius: BorderRadius.circular(16),
                             color: isSelected
-                                ? AppColors.backgroundActive
-                                : Colors.transparent,
+                                ? AppColors.accentSoft.withValues(alpha: 0.1)
+                                : AppColors.backgroundSurface,
+                            border: Border.all(
+                              color: isSelected
+                                  ? AppColors.accentHover.withValues(alpha: 0.5)
+                                  : AppColors.borderSubtle,
+                            ),
+                            boxShadow: isSelected
+                                ? [
+                                    BoxShadow(
+                                      color: AppColors.accent.withValues(alpha: 0.15),
+                                      blurRadius: 20,
+                                    )
+                                  ]
+                                : null,
                           ),
-                          child: Row(
+                          child: Stack(
+                            clipBehavior: Clip.none,
                             children: [
-                              PhosphorIcon(
-                                PhosphorIconsRegular.fileText,
-                                size: 20,
-                                color: isSelected
-                                    ? AppColors.accent
-                                    : AppColors.fileIcon,
-                              ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      file.name,
-                                      style: TextStyle(
-                                        color: isSelected
-                                            ? Colors.white
-                                            : AppColors.textPrimary,
-                                        fontSize: 14,
-                                        fontWeight: isSelected
-                                            ? FontWeight.w600
-                                            : FontWeight.normal,
-                                      ),
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                    if (file.lastModified != null)
-                                      Text(
-                                        _formatDate(file.lastModified!),
-                                        style: TextStyle(
-                                          color: isSelected
-                                              ? AppColors.textSecondary
-                                              : AppColors.textMuted,
-                                          fontSize: 12,
-                                        ),
-                                      ),
-                                  ],
-                                ),
-                              ),
                               if (isSelected)
-                                PhosphorIcon(
-                                  PhosphorIconsRegular.caretRight,
-                                  size: 16,
-                                  color: AppColors.accent,
+                                Positioned(
+                                  left: -16,
+                                  top: -14,
+                                  bottom: -14,
+                                  width: 4,
+                                  child: Container(
+                                    decoration: BoxDecoration(
+                                      color: AppColors.accent,
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: AppColors.accent,
+                                          blurRadius: 10,
+                                          spreadRadius: 2,
+                                        ),
+                                      ],
+                                    ),
+                                  ),
                                 ),
+                              Row(
+                                children: [
+                                  PhosphorIcon(
+                                    PhosphorIconsRegular.fileText,
+                                    size: 18,
+                                    color: isSelected
+                                        ? AppColors.accent
+                                        : AppColors.fileIcon,
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          file.name,
+                                          style: TextStyle(
+                                            color: isSelected
+                                                ? AppColors.textPrimary
+                                                : AppColors.textSecondary,
+                                            fontSize: 14,
+                                            fontWeight: isSelected
+                                                ? FontWeight.w600
+                                                : FontWeight.normal,
+                                          ),
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                        if (file.lastModified != null)
+                                          Text(
+                                            'LAST SYNC: ${_formatDate(file.lastModified!)}',
+                                            style: TextStyle(
+                                              color: isSelected
+                                                  ? AppColors.accentHover.withValues(alpha: 0.8)
+                                                  : AppColors.textMuted,
+                                              fontSize: 10,
+                                              letterSpacing: 0.5,
+                                            ),
+                                          ),
+                                      ],
+                                    ),
+                                  ),
+                                  if (isSelected)
+                                    PhosphorIcon(
+                                      PhosphorIconsRegular.caretRight,
+                                      size: 16,
+                                      color: AppColors.accent,
+                                    ),
+                                ],
+                              ),
                             ],
                           ),
                         ),
@@ -526,9 +575,10 @@ class _ViewerContent extends ConsumerWidget {
     return Column(
       children: [
         Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
           decoration: BoxDecoration(
             border: Border(bottom: BorderSide(color: AppColors.borderSubtle)),
+            color: Colors.black.withValues(alpha: 0.2),
           ),
           child: Row(
             children: [
@@ -540,19 +590,31 @@ class _ViewerContent extends ConsumerWidget {
                   },
                   constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
                 ),
-              PhosphorIcon(
-                PhosphorIconsRegular.fileText,
-                size: 18,
-                color: AppColors.accent,
+              Container(
+                width: 32,
+                height: 32,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: AppColors.accent.withValues(alpha: 0.2),
+                  border: Border.all(color: AppColors.accent.withValues(alpha: 0.3)),
+                ),
+                child: Center(
+                  child: PhosphorIcon(
+                    PhosphorIconsRegular.fileText,
+                    size: 16,
+                    color: AppColors.accent,
+                  ),
+                ),
               ),
-              const SizedBox(width: 10),
+              const SizedBox(width: 16),
               Expanded(
                 child: Text(
                   selectedFile.name,
                   style: const TextStyle(
                     color: AppColors.textPrimary,
-                    fontSize: 15,
+                    fontSize: 18,
                     fontWeight: FontWeight.w600,
+                    letterSpacing: 0.5,
                   ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,

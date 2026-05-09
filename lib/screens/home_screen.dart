@@ -10,6 +10,8 @@ import '../utils/constants.dart';
 import '../utils/responsive.dart';
 import '../widgets/viewer/markdown_content.dart';
 import '../widgets/sidebar/list_section.dart';
+import '../widgets/shared/spatial_background.dart';
+import '../widgets/shared/glass_panel.dart';
 import 'settings_screen.dart';
 import 'md_library_screen.dart';
 
@@ -64,8 +66,13 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     final isFullscreen = ref.watch(uiProvider).isViewerFullscreen;
 
     return Scaffold(
-      backgroundColor: AppColors.backgroundBase,
-      body: isFullscreen ? const _FullscreenWrapper() : const _ResponsiveLayout(),
+      backgroundColor: Colors.transparent,
+      body: Stack(
+        children: [
+          const SpatialBackground(),
+          if (isFullscreen) const _FullscreenWrapper() else const _ResponsiveLayout(),
+        ],
+      ),
     );
   }
 }

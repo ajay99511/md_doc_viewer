@@ -1,0 +1,88 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap');
+@import "tailwindcss";
+@plugin "@tailwindcss/typography";
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+}
+
+@layer utilities {
+  .glass-panel {
+    @apply bg-white/5 dark:bg-black/20 backdrop-blur-3xl border border-white/20 dark:border-white/10 shadow-[0_8px_32px_0_rgba(0,0,0,0.3)] dark:shadow-[0_8px_32px_0_rgba(0,0,0,0.6)];
+  }
+}
+
+body {
+  margin: 0;
+  overflow: hidden;
+  background-color: #050505;
+  color: #eeeeee;
+}
+
+/* Deep Spatial Background */
+.spatial-bg {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  overflow: hidden;
+  background: radial-gradient(circle at 15% 50%, rgba(20, 50, 150, 0.15), transparent 40%),
+              radial-gradient(circle at 85% 30%, rgba(100, 20, 150, 0.15), transparent 40%),
+              radial-gradient(circle at 50% 80%, rgba(20, 150, 150, 0.1), transparent 50%);
+  background-color: #030712; /* Tailwind slate-950 */
+}
+
+/* Magical Slow Orb Animations */
+.spatial-bg::before,
+.spatial-bg::after {
+  content: "";
+  position: absolute;
+  width: 60vw;
+  height: 60vh;
+  border-radius: 50%;
+  filter: blur(100px);
+  opacity: 0.5;
+  animation: float 20s infinite alternate ease-in-out;
+}
+
+.spatial-bg::before {
+  top: -10%;
+  left: -10%;
+  background: radial-gradient(circle, rgba(56, 189, 248, 0.15), transparent);
+}
+
+.spatial-bg::after {
+  bottom: -10%;
+  right: -10%;
+  background: radial-gradient(circle, rgba(168, 85, 247, 0.15), transparent);
+  animation-delay: -10s;
+}
+
+@keyframes float {
+  0% { transform: translate(0, 0) scale(1); }
+  100% { transform: translate(5%, 5%) scale(1.1); }
+}
+
+/* Futuristic Scrollbar */
+::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+/* Prose customizations for dark glass look */
+.prose-hologram {
+  --tw-prose-body: #d1d5db;
+  --tw-prose-headings: #f3f4f6;
+  --tw-prose-links: #38bdf8;
+  --tw-prose-code: #a78bfa;
+}

@@ -119,9 +119,14 @@ class _FolderNode extends ConsumerWidget {
             }
           },
           child: Container(
-            padding: EdgeInsets.only(left: 8.0 + depth * 16, right: 8, top: 6, bottom: 6),
+            margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+            padding: EdgeInsets.only(left: 8.0 + depth * 16, right: 8, top: 8, bottom: 8),
             decoration: BoxDecoration(
-              color: isSelected ? AppColors.backgroundActive : Colors.transparent,
+              borderRadius: BorderRadius.circular(12),
+              color: isSelected ? AppColors.accentHover.withValues(alpha: 0.15) : Colors.transparent,
+              border: Border.all(
+                color: isSelected ? AppColors.accent.withValues(alpha: 0.3) : Colors.transparent,
+              ),
             ),
             child: Row(
               children: [
@@ -141,7 +146,7 @@ class _FolderNode extends ConsumerWidget {
                       ? PhosphorIconsRegular.folderOpen
                       : PhosphorIconsRegular.folder,
                   size: 18,
-                  color: AppColors.folderIcon,
+                  color: AppColors.accentHover,
                 ),
                 const SizedBox(width: 8),
                 Expanded(
@@ -207,9 +212,14 @@ class _FileNodeItem extends ConsumerWidget {
         ref.read(selectedFileProvider.notifier).state = node;
       },
       child: Container(
-        padding: EdgeInsets.only(left: 24 + depth * 16, right: 8, top: 5, bottom: 5),
+        margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+        padding: EdgeInsets.only(left: 24 + depth * 16, right: 8, top: 8, bottom: 8),
         decoration: BoxDecoration(
-          color: isSelected ? AppColors.backgroundActive : Colors.transparent,
+          borderRadius: BorderRadius.circular(12),
+          color: isSelected ? AppColors.accentHover.withValues(alpha: 0.15) : Colors.transparent,
+          border: Border.all(
+            color: isSelected ? AppColors.accent.withValues(alpha: 0.3) : Colors.transparent,
+          ),
         ),
         child: Row(
           children: [
