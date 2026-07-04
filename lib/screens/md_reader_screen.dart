@@ -4,6 +4,7 @@ import 'package:phosphor_flutter/phosphor_flutter.dart';
 import '../models/imported_file.dart';
 import '../providers/imported_files_provider.dart';
 import '../utils/constants.dart';
+import '../utils/palette.dart';
 import '../widgets/viewer/markdown_content.dart';
 import '../providers/settings_provider.dart';
 
@@ -65,12 +66,12 @@ class _MdReaderScreenState extends ConsumerState<MdReaderScreen> {
     final fontSize = settings.markdownFontSize;
 
     return Scaffold(
-      backgroundColor: AppColors.backgroundBase,
+      backgroundColor: context.palette.backgroundBase,
       appBar: AppBar(
-        backgroundColor: AppColors.backgroundSurface,
+        backgroundColor: context.palette.backgroundSurface,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: AppColors.textPrimary),
+          icon: Icon(Icons.arrow_back, color: context.palette.textPrimary),
           onPressed: () => Navigator.pop(context),
         ),
         title: Row(
@@ -84,8 +85,8 @@ class _MdReaderScreenState extends ConsumerState<MdReaderScreen> {
             Expanded(
               child: Text(
                 widget.file.originalName,
-                style: const TextStyle(
-                  color: AppColors.textPrimary,
+                style: TextStyle(
+                  color: context.palette.textPrimary,
                   fontSize: 15,
                   fontWeight: FontWeight.w600,
                 ),
@@ -99,7 +100,7 @@ class _MdReaderScreenState extends ConsumerState<MdReaderScreen> {
           // Font size controls
           IconButton(
             icon: const Icon(Icons.text_decrease, size: 20),
-            color: AppColors.textMuted,
+            color: context.palette.textMuted,
             onPressed: fontSize > 10
                 ? () => ref.read(settingsProvider.notifier).update(
                       markdownFontSize: fontSize - 1,
@@ -111,12 +112,12 @@ class _MdReaderScreenState extends ConsumerState<MdReaderScreen> {
             padding: const EdgeInsets.symmetric(horizontal: 2),
             child: Text(
               '${fontSize.toInt()}',
-              style: const TextStyle(color: AppColors.textMuted, fontSize: 12),
+              style: TextStyle(color: context.palette.textMuted, fontSize: 12),
             ),
           ),
           IconButton(
             icon: const Icon(Icons.text_increase, size: 20),
-            color: AppColors.textMuted,
+            color: context.palette.textMuted,
             onPressed: fontSize < 28
                 ? () => ref.read(settingsProvider.notifier).update(
                       markdownFontSize: fontSize + 1,
@@ -163,8 +164,8 @@ class _MdReaderScreenState extends ConsumerState<MdReaderScreen> {
               const SizedBox(height: 20),
               Text(
                 _error!,
-                style: const TextStyle(
-                  color: AppColors.textMuted,
+                style: TextStyle(
+                  color: context.palette.textMuted,
                   fontSize: 14,
                 ),
                 textAlign: TextAlign.center,
@@ -193,18 +194,21 @@ class _MdReaderScreenState extends ConsumerState<MdReaderScreen> {
             PhosphorIcon(
               PhosphorIconsRegular.fileText,
               size: 56,
-              color: AppColors.textMuted,
+              color: context.palette.textMuted,
             ),
             const SizedBox(height: 16),
-            const Text(
+            Text(
               'This file is empty',
-              style: TextStyle(color: AppColors.textMuted, fontSize: 15),
+              style: TextStyle(color: context.palette.textMuted, fontSize: 15),
             ),
           ],
         ),
       );
     }
 
-    return MarkdownContent(content: _content!);
+    return MarkdownContent(
+      content: _content!,
+      documentPath: widget.file.storedPath,
+    );
   }
 }

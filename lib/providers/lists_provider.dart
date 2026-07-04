@@ -17,17 +17,23 @@ class ListData {
   });
 }
 
+/// Shared singleton so dialogs and the sidebar read/write the same store.
+final listServiceProvider = Provider<ListService>((ref) => ListService());
+
 /// All file lists state.
 final listsProvider = StateNotifierProvider<ListsNotifier, AsyncValue<List<ListData>>>((ref) {
-  return ListsNotifier();
+  return ListsNotifier(ref.watch(listServiceProvider));
 });
 
 class ListsNotifier extends StateNotifier<AsyncValue<List<ListData>>> {
-  final ListService _service = ListService();
+  final ListService _service;
 
-  ListsNotifier() : super(const AsyncValue.loading()) {
+  ListsNotifier(this._service) : super(const AsyncValue.loading()) {
     _load();
   }
+
+  /// Re-read lists from persistence (used after external mutations).
+  Future<void> reload() => _load();
 
   Future<void> _load() async {
     try {

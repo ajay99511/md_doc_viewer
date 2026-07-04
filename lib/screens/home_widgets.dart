@@ -19,7 +19,7 @@ class _AppHeader extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       decoration: BoxDecoration(
-        border: Border(bottom: BorderSide(color: AppColors.borderSubtle)),
+        border: Border(bottom: BorderSide(color: context.palette.borderSubtle)),
       ),
       child: Row(
         children: [
@@ -50,7 +50,7 @@ class _AppHeader extends StatelessWidget {
             icon: PhosphorIcon(
               PhosphorIconsRegular.arrowClockwise,
               size: 18,
-              color: AppColors.textMuted,
+              color: context.palette.textMuted,
             ),
             tooltip: 'Refresh',
             onPressed: onRefresh,
@@ -61,7 +61,7 @@ class _AppHeader extends StatelessWidget {
             icon: PhosphorIcon(
               PhosphorIconsRegular.plus,
               size: 18,
-              color: AppColors.textMuted,
+              color: context.palette.textMuted,
             ),
             tooltip: 'Add folder',
             onPressed: onAddFolder,
@@ -72,7 +72,7 @@ class _AppHeader extends StatelessWidget {
             icon: PhosphorIcon(
               PhosphorIconsRegular.gear,
               size: 18,
-              color: AppColors.textMuted,
+              color: context.palette.textMuted,
             ),
             tooltip: 'Settings',
             onPressed: onSettings,
@@ -121,12 +121,15 @@ class _FolderTreeContent extends ConsumerWidget {
           );
         }
 
-        // Show managed folder headers + tree
+        // Flatten the visible tree into a single virtualized list so a folder
+        // with thousands of entries doesn't build every row at once.
+        final visible = _flattenVisibleNodes(nodes);
         return ListView.builder(
           padding: const EdgeInsets.only(top: 8),
-          itemCount: nodes.length,
+          itemCount: visible.length,
           itemBuilder: (context, index) {
-            return _TreeNodeWidget(node: nodes[index], depth: 0);
+            final row = visible[index];
+            return _TreeNodeWidget(node: row.node, depth: row.depth);
           },
         );
       },
@@ -200,8 +203,8 @@ class _EmptyState extends StatelessWidget {
             // Title
             Text(
               hasError ? 'Failed to Load Folders' : 'No Folders Added',
-              style: const TextStyle(
-                color: AppColors.textPrimary,
+              style: TextStyle(
+                color: context.palette.textPrimary,
                 fontSize: 20,
                 fontWeight: FontWeight.w700,
               ),
@@ -213,7 +216,7 @@ class _EmptyState extends StatelessWidget {
                   ? 'There was a problem loading your folders.'
                   : 'Add folders containing Markdown files\nto start exploring your documentation.',
               style: TextStyle(
-                color: AppColors.textMuted,
+                color: context.palette.textMuted,
                 fontSize: 14,
                 height: 1.5,
               ),
@@ -226,9 +229,9 @@ class _EmptyState extends StatelessWidget {
                 padding: const EdgeInsets.all(12),
                 margin: const EdgeInsets.symmetric(horizontal: 8),
                 decoration: BoxDecoration(
-                  color: AppColors.backgroundElevated,
+                  color: context.palette.backgroundElevated,
                   borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: AppColors.borderSubtle),
+                  border: Border.all(color: context.palette.borderSubtle),
                 ),
                 child: Row(
                   children: [
@@ -238,7 +241,7 @@ class _EmptyState extends StatelessWidget {
                       child: Text(
                         'Tip: Add specific project folders, not entire drives like C:\\',
                         style: TextStyle(
-                          color: AppColors.textSecondary,
+                          color: context.palette.textSecondary,
                           fontSize: 12,
                         ),
                       ),
@@ -270,7 +273,7 @@ class _EmptyState extends StatelessWidget {
                     icon: const Icon(Icons.refresh, size: 18),
                     label: const Text('Retry'),
                     style: OutlinedButton.styleFrom(
-                      foregroundColor: AppColors.textPrimary,
+                      foregroundColor: context.palette.textPrimary,
                       minimumSize: const Size(100, 48),
                       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                     ),
@@ -325,7 +328,7 @@ class _FileListContent extends ConsumerWidget {
           child: Text(
             'FILES',
             style: TextStyle(
-              color: AppColors.textMuted,
+              color: context.palette.textMuted,
               fontSize: 12,
               fontWeight: FontWeight.w600,
               letterSpacing: 1.2,
@@ -337,7 +340,7 @@ class _FileListContent extends ConsumerWidget {
           decoration: BoxDecoration(
             color: Colors.black.withValues(alpha: 0.4),
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: AppColors.borderSubtle),
+            border: Border.all(color: context.palette.borderSubtle),
             boxShadow: [
               BoxShadow(
                 color: AppColors.accentHover.withValues(alpha: 0.1),
@@ -352,18 +355,18 @@ class _FileListContent extends ConsumerWidget {
               PhosphorIcon(
                 PhosphorIconsRegular.magnifyingGlass,
                 size: 18,
-                color: AppColors.textMuted,
+                color: context.palette.textMuted,
               ),
               const SizedBox(width: 8),
               Expanded(
                 child: TextField(
-                  decoration: const InputDecoration(
+                  decoration: InputDecoration(
                     hintText: 'Search in folder...',
-                    hintStyle: TextStyle(color: AppColors.textMuted, fontSize: 14),
+                    hintStyle: TextStyle(color: context.palette.textMuted, fontSize: 14),
                     border: InputBorder.none,
                     contentPadding: EdgeInsets.symmetric(vertical: 10),
                   ),
-                  style: TextStyle(color: AppColors.textPrimary, fontSize: 14),
+                  style: TextStyle(color: context.palette.textPrimary, fontSize: 14),
                   onChanged: (value) =>
                       ref.read(uiProvider.notifier).setSearchQuery(value),
                 ),
@@ -373,7 +376,7 @@ class _FileListContent extends ConsumerWidget {
                   icon: PhosphorIcon(
                     PhosphorIconsRegular.x,
                     size: 16,
-                    color: AppColors.textMuted,
+                    color: context.palette.textMuted,
                   ),
                   onPressed: () =>
                       ref.read(uiProvider.notifier).setSearchQuery(''),
@@ -393,15 +396,15 @@ class _FileListContent extends ConsumerWidget {
                       PhosphorIcon(
                         PhosphorIconsRegular.file,
                         size: 48,
-                        color: AppColors.textMuted,
+                        color: context.palette.textMuted,
                       ),
                       const SizedBox(height: 12),
                       Text(
                         query.isNotEmpty
                             ? 'No files match "$query"'
                             : 'Select a folder to see files',
-                        style: const TextStyle(
-                            color: AppColors.textMuted, fontSize: 14),
+                        style: TextStyle(
+                            color: context.palette.textMuted, fontSize: 14),
                       ),
                     ],
                   ),
@@ -431,11 +434,11 @@ class _FileListContent extends ConsumerWidget {
                             borderRadius: BorderRadius.circular(16),
                             color: isSelected
                                 ? AppColors.accentSoft.withValues(alpha: 0.1)
-                                : AppColors.backgroundSurface,
+                                : context.palette.backgroundSurface,
                             border: Border.all(
                               color: isSelected
                                   ? AppColors.accentHover.withValues(alpha: 0.5)
-                                  : AppColors.borderSubtle,
+                                  : context.palette.borderSubtle,
                             ),
                             boxShadow: isSelected
                                 ? [
@@ -486,8 +489,8 @@ class _FileListContent extends ConsumerWidget {
                                           file.name,
                                           style: TextStyle(
                                             color: isSelected
-                                                ? AppColors.textPrimary
-                                                : AppColors.textSecondary,
+                                                ? context.palette.textPrimary
+                                                : context.palette.textSecondary,
                                             fontSize: 14,
                                             fontWeight: isSelected
                                                 ? FontWeight.w600
@@ -502,7 +505,7 @@ class _FileListContent extends ConsumerWidget {
                                             style: TextStyle(
                                               color: isSelected
                                                   ? AppColors.accentHover.withValues(alpha: 0.8)
-                                                  : AppColors.textMuted,
+                                                  : context.palette.textMuted,
                                               fontSize: 10,
                                               letterSpacing: 0.5,
                                             ),
@@ -557,13 +560,13 @@ class _ViewerContent extends ConsumerWidget {
             PhosphorIcon(
               PhosphorIconsRegular.fileText,
               size: 64,
-              color: AppColors.textMuted,
+              color: context.palette.textMuted,
             ),
             const SizedBox(height: 16),
             Text(
               'Select a file to view',
               style: TextStyle(
-                color: AppColors.textMuted,
+                color: context.palette.textMuted,
                 fontSize: 16,
               ),
             ),
@@ -577,14 +580,14 @@ class _ViewerContent extends ConsumerWidget {
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
           decoration: BoxDecoration(
-            border: Border(bottom: BorderSide(color: AppColors.borderSubtle)),
+            border: Border(bottom: BorderSide(color: context.palette.borderSubtle)),
             color: Colors.black.withValues(alpha: 0.2),
           ),
           child: Row(
             children: [
               if (showBackButton)
                 IconButton(
-                  icon: const Icon(Icons.arrow_back, color: AppColors.textSecondary),
+                  icon: Icon(Icons.arrow_back, color: context.palette.textSecondary),
                   onPressed: () {
                     ref.read(uiProvider.notifier).navigateToFiles();
                   },
@@ -610,8 +613,8 @@ class _ViewerContent extends ConsumerWidget {
               Expanded(
                 child: Text(
                   selectedFile.name,
-                  style: const TextStyle(
-                    color: AppColors.textPrimary,
+                  style: TextStyle(
+                    color: context.palette.textPrimary,
                     fontSize: 18,
                     fontWeight: FontWeight.w600,
                     letterSpacing: 0.5,
@@ -633,7 +636,7 @@ class _ViewerContent extends ConsumerWidget {
                       size: 20,
                       color: isBookmarked
                           ? AppColors.starActive
-                          : AppColors.textMuted,
+                          : context.palette.textMuted,
                     ),
                     onPressed: () {
                       if (isBookmarked) {
@@ -647,14 +650,14 @@ class _ViewerContent extends ConsumerWidget {
                 },
               ),
               IconButton(
-                icon: const Icon(Icons.open_in_full, color: AppColors.textSecondary, size: 20),
+                icon: Icon(Icons.open_in_full, color: context.palette.textSecondary, size: 20),
                 onPressed: () {
                   ref.read(uiProvider.notifier).setFullscreen(true);
                 },
                 constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
               ),
               IconButton(
-                icon: const Icon(Icons.close, color: AppColors.textSecondary, size: 20),
+                icon: Icon(Icons.close, color: context.palette.textSecondary, size: 20),
                 onPressed: () {
                   ref.read(selectedFileProvider.notifier).state = null;
                   if (AppBreakpoints.isCompact(context)) {
@@ -673,14 +676,17 @@ class _ViewerContent extends ConsumerWidget {
               return contentAsync.when(
                 data: (content) {
                   if (content == null || content.isEmpty) {
-                    return const Center(
+                    return Center(
                       child: Text(
                         'This file is empty',
-                        style: TextStyle(color: AppColors.textMuted),
+                        style: TextStyle(color: context.palette.textMuted),
                       ),
                     );
                   }
-                  return MarkdownContent(content: content);
+                  return MarkdownContent(
+                    content: content,
+                    documentPath: selectedFile.path,
+                  );
                 },
                 loading: () => const Center(
                     child: CircularProgressIndicator(strokeWidth: 2)),
@@ -714,7 +720,7 @@ class _BookmarkSection extends ConsumerWidget {
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Divider(height: 1, color: AppColors.borderSubtle),
+            Divider(height: 1, color: context.palette.borderSubtle),
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
               child: Row(
@@ -725,10 +731,10 @@ class _BookmarkSection extends ConsumerWidget {
                     color: AppColors.starActive,
                   ),
                   const SizedBox(width: 8),
-                  const Text(
+                  Text(
                     'BOOKMARKS',
                     style: TextStyle(
-                      color: AppColors.textMuted,
+                      color: context.palette.textMuted,
                       fontSize: 11,
                       fontWeight: FontWeight.w600,
                       letterSpacing: 1.2,
@@ -797,7 +803,7 @@ class _BookmarkSection extends ConsumerWidget {
                             child: PhosphorIcon(
                               PhosphorIconsRegular.dotsSixVertical,
                               size: 16,
-                              color: AppColors.textMuted,
+                              color: context.palette.textMuted,
                             ),
                           ),
                           const SizedBox(width: 6),
@@ -810,8 +816,8 @@ class _BookmarkSection extends ConsumerWidget {
                           Expanded(
                             child: Text(
                               bm.label,
-                              style: const TextStyle(
-                                color: AppColors.textSecondary,
+                              style: TextStyle(
+                                color: context.palette.textSecondary,
                                 fontSize: 14,
                               ),
                               maxLines: 1,
@@ -822,7 +828,7 @@ class _BookmarkSection extends ConsumerWidget {
                             icon: PhosphorIcon(
                               PhosphorIconsRegular.x,
                               size: 16,
-                              color: AppColors.textMuted,
+                              color: context.palette.textMuted,
                             ),
                             onPressed: () {
                               ref.read(bookmarksProvider.notifier).remove(bm.path);
@@ -859,19 +865,19 @@ class _FullscreenWrapper extends ConsumerWidget {
     }
 
     return ColoredBox(
-      color: AppColors.backgroundBase,
+      color: context.palette.backgroundBase,
       child: Column(
         children: [
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
             decoration: BoxDecoration(
-              color: AppColors.backgroundSurface,
-              border: Border(bottom: BorderSide(color: AppColors.borderSubtle)),
+              color: context.palette.backgroundSurface,
+              border: Border(bottom: BorderSide(color: context.palette.borderSubtle)),
             ),
             child: Row(
               children: [
                 IconButton(
-                  icon: const Icon(Icons.close, color: AppColors.textSecondary),
+                  icon: Icon(Icons.close, color: context.palette.textSecondary),
                   onPressed: () {
                     ref.read(uiProvider.notifier).setFullscreen(false);
                   },
@@ -881,8 +887,8 @@ class _FullscreenWrapper extends ConsumerWidget {
                 Expanded(
                   child: Text(
                     selectedFile.name,
-                    style: const TextStyle(
-                      color: AppColors.textPrimary,
+                    style: TextStyle(
+                      color: context.palette.textPrimary,
                       fontSize: 15,
                       fontWeight: FontWeight.w600,
                     ),
@@ -897,7 +903,7 @@ class _FullscreenWrapper extends ConsumerWidget {
                       children: [
                         IconButton(
                           icon: const Icon(Icons.text_decrease, size: 20),
-                          color: AppColors.textMuted,
+                          color: context.palette.textMuted,
                           onPressed: () {
                             if (fontSize > 10) {
                               ref.read(settingsProvider.notifier).update(
@@ -909,12 +915,12 @@ class _FullscreenWrapper extends ConsumerWidget {
                         ),
                         Text(
                           '${fontSize.toInt()}',
-                          style: const TextStyle(
-                              color: AppColors.textMuted, fontSize: 12),
+                          style: TextStyle(
+                              color: context.palette.textMuted, fontSize: 12),
                         ),
                         IconButton(
                           icon: const Icon(Icons.text_increase, size: 20),
-                          color: AppColors.textMuted,
+                          color: context.palette.textMuted,
                           onPressed: () {
                             if (fontSize < 28) {
                               ref.read(settingsProvider.notifier).update(
@@ -939,14 +945,18 @@ class _FullscreenWrapper extends ConsumerWidget {
                 return contentAsync.when(
                   data: (content) {
                     if (content == null || content.isEmpty) {
-                      return const Center(
+                      return Center(
                         child: Text(
                           'This file is empty',
-                          style: TextStyle(color: AppColors.textMuted),
+                          style: TextStyle(color: context.palette.textMuted),
                         ),
                       );
                     }
-                    return MarkdownContent(content: content, customFontSize: fontSize);
+                    return MarkdownContent(
+                      content: content,
+                      customFontSize: fontSize,
+                      documentPath: selectedFile.path,
+                    );
                   },
                   loading: () => const Center(
                       child: CircularProgressIndicator(strokeWidth: 2)),
@@ -969,6 +979,31 @@ class _FullscreenWrapper extends ConsumerWidget {
 // ═══════════════════════════════════════════════════
 // FOLDER/FILE TREE WIDGETS
 // ═══════════════════════════════════════════════════
+
+/// A single flattened tree row: a node paired with its indentation depth.
+class _TreeRow {
+  final FileNode node;
+  final int depth;
+  const _TreeRow(this.node, this.depth);
+}
+
+/// Walk the tree depth-first, emitting only currently-visible rows (a child is
+/// visible iff every ancestor folder is expanded). Enables a flat, virtualized
+/// ListView instead of nested Columns.
+List<_TreeRow> _flattenVisibleNodes(List<FileNode> roots) {
+  final out = <_TreeRow>[];
+  void walk(List<FileNode> nodes, int depth) {
+    for (final node in nodes) {
+      out.add(_TreeRow(node, depth));
+      if (node.isDirectory && node.isExpanded && node.children.isNotEmpty) {
+        walk(node.children, depth + 1);
+      }
+    }
+  }
+
+  walk(roots, 0);
+  return out;
+}
 
 class _TreeNodeWidget extends ConsumerWidget {
   final dynamic node;
@@ -996,9 +1031,9 @@ class _FolderWidget extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final hasChildren = node.children?.isNotEmpty ?? false;
 
-    return Column(
-      children: [
-        InkWell(
+    // Renders only this folder's row. Child rows are emitted separately by the
+    // flattened, virtualized list in _FolderTreeContent.
+    return InkWell(
           onTap: () async {
             final appSettings = ref.read(settingsProvider);
             await ref.read(fileTreeProvider.notifier).toggleExpand(
@@ -1028,7 +1063,7 @@ class _FolderWidget extends ConsumerWidget {
                         ? PhosphorIconsRegular.caretDown
                         : PhosphorIconsRegular.caretRight,
                     size: 14,
-                    color: AppColors.textMuted,
+                    color: context.palette.textMuted,
                   )
                 else
                   const SizedBox(width: 14),
@@ -1044,8 +1079,8 @@ class _FolderWidget extends ConsumerWidget {
                 Expanded(
                   child: Text(
                     node.name,
-                    style: const TextStyle(
-                      color: AppColors.textPrimary,
+                    style: TextStyle(
+                      color: context.palette.textPrimary,
                       fontSize: 15,
                     ),
                     maxLines: 1,
@@ -1068,14 +1103,34 @@ class _FolderWidget extends ConsumerWidget {
                             size: 18,
                             color: isBookmarked
                                 ? AppColors.starActive
-                                : Colors.transparent,
+                                : context.palette.textMuted,
                           ),
+                          tooltip: isBookmarked ? 'Remove bookmark' : 'Bookmark folder',
                           onPressed: () {
                             if (isBookmarked) {
                               ref.read(bookmarksProvider.notifier).remove(node.path);
                             } else {
                               ref.read(bookmarksProvider.notifier).add(node.path, node.name);
                             }
+                          },
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+                        ),
+                        IconButton(
+                          icon: PhosphorIcon(
+                            PhosphorIconsRegular.listPlus,
+                            size: 18,
+                            color: context.palette.textMuted,
+                          ),
+                          tooltip: 'Add to list',
+                          onPressed: () {
+                            showDialog(
+                              context: context,
+                              builder: (_) => AddToListDialog(
+                                folderPath: node.path,
+                                folderName: node.name,
+                              ),
+                            );
                           },
                           padding: EdgeInsets.zero,
                           constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
@@ -1087,12 +1142,7 @@ class _FolderWidget extends ConsumerWidget {
               ],
             ),
           ),
-        ),
-        if (node.isExpanded && hasChildren)
-          ...node.children.map(
-              (child) => _TreeNodeWidget(node: child, depth: depth + 1)),
-      ],
-    );
+        );
   }
 }
 
@@ -1128,7 +1178,7 @@ class _FileWidget extends ConsumerWidget {
               child: Text(
                 node.name,
                 style: TextStyle(
-                  color: isSelected ? Colors.white : AppColors.textSecondary,
+                  color: isSelected ? Colors.white : context.palette.textSecondary,
                   fontSize: 14,
                   fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
                 ),

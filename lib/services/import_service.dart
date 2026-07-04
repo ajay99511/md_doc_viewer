@@ -36,7 +36,8 @@ class ImportService {
     final existing = await loadImportedFiles();
     final existingNames = existing.map((f) => f.originalName).toSet();
 
-    for (final platformFile in result.files) {
+    for (var i = 0; i < result.files.length; i++) {
+      final platformFile = result.files[i];
       if (platformFile.path == null) continue;
 
       try {
@@ -44,7 +45,9 @@ class ImportService {
         if (!await sourceFile.exists()) continue;
 
         final originalName = platformFile.name;
-        final timestamp = DateTime.now().millisecondsSinceEpoch;
+        // Microsecond clock + loop index guarantees unique ids even when
+        // several files are imported within the same millisecond.
+        final timestamp = '${DateTime.now().microsecondsSinceEpoch}_$i';
 
         // Deduplicate names: if "README.md" already exists, use "README_1681234567890.md"
         String storedName = originalName;
@@ -60,7 +63,7 @@ class ImportService {
         final stat = await File(destPath).stat();
 
         final imported = ImportedFile(
-          id: '$timestamp',
+          id: timestamp,
           originalName: originalName,
           storedPath: destPath,
           importedAt: DateTime.now(),

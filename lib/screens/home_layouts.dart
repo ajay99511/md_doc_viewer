@@ -205,7 +205,7 @@ class _MobileLayout extends ConsumerWidget {
         backgroundColor: Colors.black.withValues(alpha: 0.2),
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.menu, color: AppColors.textPrimary),
+          icon: Icon(Icons.menu, color: context.palette.textPrimary),
           onPressed: () {
             ref.read(uiProvider.notifier).toggleSidebarDrawer();
           },
@@ -218,10 +218,10 @@ class _MobileLayout extends ConsumerWidget {
               color: AppColors.accent,
             ),
             const SizedBox(width: 8),
-            const Text(
+            Text(
               'MD Explorer',
               style: TextStyle(
-                color: AppColors.textPrimary,
+                color: context.palette.textPrimary,
                 fontSize: 16,
                 fontWeight: FontWeight.w700,
               ),
@@ -233,7 +233,7 @@ class _MobileLayout extends ConsumerWidget {
             icon: PhosphorIcon(
               PhosphorIconsRegular.arrowClockwise,
               size: 20,
-              color: AppColors.textSecondary,
+              color: context.palette.textSecondary,
             ),
             onPressed: () {
               ref.read(fileTreeProvider.notifier).refresh(
@@ -247,7 +247,7 @@ class _MobileLayout extends ConsumerWidget {
             icon: PhosphorIcon(
               PhosphorIconsRegular.books,
               size: 22,
-              color: AppColors.textSecondary,
+              color: context.palette.textSecondary,
             ),
             tooltip: 'My Library',
             onPressed: () {
@@ -258,7 +258,7 @@ class _MobileLayout extends ConsumerWidget {
             },
           ),
           IconButton(
-            icon: const Icon(Icons.settings_outlined, color: AppColors.textSecondary),
+            icon: Icon(Icons.settings_outlined, color: context.palette.textSecondary),
             onPressed: () {
               Navigator.push(
                 context,
@@ -317,10 +317,10 @@ class _MobileDrawer extends ConsumerWidget {
                     color: AppColors.accent,
                   ),
                   const SizedBox(width: 12),
-                  const Text(
+                  Text(
                     'NEXUS DB',
                     style: TextStyle(
-                      color: AppColors.textPrimary,
+                      color: context.palette.textPrimary,
                       fontSize: 16,
                       fontWeight: FontWeight.w700,
                       letterSpacing: 2.0,
@@ -331,7 +331,7 @@ class _MobileDrawer extends ConsumerWidget {
                     icon: PhosphorIcon(
                       PhosphorIconsRegular.plus,
                       size: 20,
-                      color: AppColors.textSecondary,
+                      color: context.palette.textSecondary,
                     ),
                     onPressed: () async {
                       Navigator.pop(context);
@@ -349,7 +349,7 @@ class _MobileDrawer extends ConsumerWidget {
                 ],
               ),
             ),
-            const Divider(height: 1, color: AppColors.borderSubtle),
+            Divider(height: 1, color: context.palette.borderSubtle),
             Expanded(
               child: Column(
                 children: [
@@ -397,7 +397,7 @@ class _MobileBottomNav extends ConsumerWidget {
             size: 24,
             color: uiState.activeMobilePanel == MobilePanel.tree
                 ? AppColors.accent
-                : AppColors.textMuted,
+                : context.palette.textMuted,
           ),
           label: 'Folders',
         ),
@@ -407,7 +407,7 @@ class _MobileBottomNav extends ConsumerWidget {
             size: 24,
             color: uiState.activeMobilePanel == MobilePanel.files
                 ? AppColors.accent
-                : AppColors.textMuted,
+                : context.palette.textMuted,
           ),
           label: 'Files',
         ),
@@ -418,7 +418,7 @@ class _MobileBottomNav extends ConsumerWidget {
               size: 24,
               color: uiState.activeMobilePanel == MobilePanel.viewer
                   ? AppColors.accent
-                  : AppColors.textMuted,
+                  : context.palette.textMuted,
             ),
             label: 'Viewer',
           ),
@@ -439,13 +439,13 @@ class _MobileEmptyViewer extends StatelessWidget {
           PhosphorIcon(
             PhosphorIconsRegular.fileText,
             size: 64,
-            color: AppColors.textMuted,
+            color: context.palette.textMuted,
           ),
           const SizedBox(height: 16),
           Text(
             'Select a file to view',
             style: TextStyle(
-              color: AppColors.textMuted,
+              color: context.palette.textMuted,
               fontSize: 16,
             ),
           ),
@@ -453,7 +453,7 @@ class _MobileEmptyViewer extends StatelessWidget {
           Text(
             'Tap a file from the Files tab',
             style: TextStyle(
-              color: AppColors.textMuted,
+              color: context.palette.textMuted,
               fontSize: 13,
             ),
           ),

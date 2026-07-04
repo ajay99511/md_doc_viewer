@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'dart:ui';
 import '../../utils/constants.dart';
+import '../../utils/palette.dart';
 
 class GlassPanel extends StatelessWidget {
   final Widget child;
@@ -42,10 +43,10 @@ class GlassPanel extends StatelessWidget {
           child: Container(
             padding: padding,
             decoration: BoxDecoration(
-              color: AppColors.backgroundSurface, // usually white/5 or black/20
+              color: context.palette.backgroundSurface, // usually white/5 or black/20
               borderRadius: BorderRadius.circular(borderRadius),
               border: Border.all(
-                color: AppColors.borderSubtle, // usually white/20
+                color: context.palette.borderSubtle, // usually white/20
                 width: 1,
               ),
             ),

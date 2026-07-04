@@ -18,6 +18,20 @@ import 'package:highlight/languages/php.dart' as php;
 import 'package:highlight/languages/ruby.dart' as ruby;
 import 'package:highlight/languages/cpp.dart' as cpp;
 
+/// Language ids (and aliases) registered for highlighting. Used to decide
+/// whether a fenced-code language tag can be highlighted before handing it to
+/// the highlighter (avoids passing unknown languages).
+const Set<String> _registeredLanguages = {
+  'dart', 'js', 'javascript', 'python', 'py', 'typescript', 'ts', 'tsx',
+  'json', 'xml', 'html', 'css', 'bash', 'sh', 'java', 'go', 'rust', 'yaml',
+  'yml', 'sql', 'swift', 'kotlin', 'kt', 'php', 'ruby', 'rb', 'cpp', 'c++',
+  'cc', 'h', 'hpp',
+};
+
+/// Whether [language] (case-insensitive) has a registered highlighter.
+bool isSupportedHighlightLanguage(String language) =>
+    _registeredLanguages.contains(language.toLowerCase());
+
 /// Register commonly used languages for syntax highlighting.
 void registerHighlightLanguages() {
   hl.highlight.registerLanguage('dart', dart.dart);

@@ -4,6 +4,7 @@ import 'package:phosphor_flutter/phosphor_flutter.dart';
 import '../models/imported_file.dart';
 import '../providers/imported_files_provider.dart';
 import '../utils/constants.dart';
+import '../utils/palette.dart';
 import 'md_reader_screen.dart';
 
 /// Mobile-native Markdown Library screen with full CRUD operations.
@@ -68,20 +69,20 @@ class _MdLibraryScreenState extends ConsumerState<MdLibraryScreen>
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: AppColors.backgroundElevated,
+        backgroundColor: context.palette.backgroundElevated,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text(
+        title: Text(
           'Delete File',
-          style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w700),
+          style: TextStyle(color: context.palette.textPrimary, fontWeight: FontWeight.w700),
         ),
         content: Text(
           'Remove "${file.originalName}" from your library?\n\nThis will delete the stored copy.',
-          style: const TextStyle(color: AppColors.textSecondary, height: 1.5),
+          style: TextStyle(color: context.palette.textSecondary, height: 1.5),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Cancel', style: TextStyle(color: AppColors.textMuted)),
+            child: Text('Cancel', style: TextStyle(color: context.palette.textMuted)),
           ),
           FilledButton(
             onPressed: () => Navigator.pop(ctx, true),
@@ -104,7 +105,7 @@ class _MdLibraryScreenState extends ConsumerState<MdLibraryScreen>
               '${file.originalName} deleted',
               style: const TextStyle(color: Colors.white),
             ),
-            backgroundColor: AppColors.backgroundElevated,
+            backgroundColor: context.palette.backgroundElevated,
             behavior: SnackBarBehavior.floating,
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
             margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
@@ -121,20 +122,20 @@ class _MdLibraryScreenState extends ConsumerState<MdLibraryScreen>
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: AppColors.backgroundElevated,
+        backgroundColor: context.palette.backgroundElevated,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text(
+        title: Text(
           'Delete Selected',
-          style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w700),
+          style: TextStyle(color: context.palette.textPrimary, fontWeight: FontWeight.w700),
         ),
         content: Text(
           'Remove $count file${count > 1 ? 's' : ''} from your library?',
-          style: const TextStyle(color: AppColors.textSecondary),
+          style: TextStyle(color: context.palette.textSecondary),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Cancel', style: TextStyle(color: AppColors.textMuted)),
+            child: Text('Cancel', style: TextStyle(color: context.palette.textMuted)),
           ),
           FilledButton(
             onPressed: () => Navigator.pop(ctx, true),
@@ -158,7 +159,7 @@ class _MdLibraryScreenState extends ConsumerState<MdLibraryScreen>
 
     showModalBottomSheet(
       context: context,
-      backgroundColor: AppColors.backgroundElevated,
+      backgroundColor: context.palette.backgroundElevated,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
@@ -173,18 +174,18 @@ class _MdLibraryScreenState extends ConsumerState<MdLibraryScreen>
                 height: 4,
                 margin: const EdgeInsets.only(bottom: 16),
                 decoration: BoxDecoration(
-                  color: AppColors.borderDefault,
+                  color: context.palette.borderDefault,
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
-              const Padding(
+              Padding(
                 padding: EdgeInsets.symmetric(horizontal: 20, vertical: 8),
                 child: Align(
                   alignment: Alignment.centerLeft,
                   child: Text(
                     'Sort By',
                     style: TextStyle(
-                      color: AppColors.textPrimary,
+                      color: context.palette.textPrimary,
                       fontSize: 18,
                       fontWeight: FontWeight.w700,
                     ),
@@ -214,12 +215,12 @@ class _MdLibraryScreenState extends ConsumerState<MdLibraryScreen>
         leading: PhosphorIcon(
           opt.$3,
           size: 22,
-          color: isActive ? AppColors.accent : AppColors.textMuted,
+          color: isActive ? AppColors.accent : context.palette.textMuted,
         ),
         title: Text(
           opt.$2,
           style: TextStyle(
-            color: isActive ? AppColors.accent : AppColors.textPrimary,
+            color: isActive ? AppColors.accent : context.palette.textPrimary,
             fontWeight: isActive ? FontWeight.w600 : FontWeight.normal,
           ),
         ),
@@ -240,7 +241,7 @@ class _MdLibraryScreenState extends ConsumerState<MdLibraryScreen>
     final isMultiSelect = state.isMultiSelectMode;
 
     return Scaffold(
-      backgroundColor: AppColors.backgroundBase,
+      backgroundColor: context.palette.backgroundBase,
       appBar: _buildAppBar(state, isMultiSelect),
       body: Column(
         children: [
@@ -279,16 +280,16 @@ class _MdLibraryScreenState extends ConsumerState<MdLibraryScreen>
   PreferredSizeWidget _buildAppBar(ImportedFilesState state, bool isMultiSelect) {
     if (isMultiSelect) {
       return AppBar(
-        backgroundColor: AppColors.backgroundElevated,
+        backgroundColor: context.palette.backgroundElevated,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.close, color: AppColors.textPrimary),
+          icon: Icon(Icons.close, color: context.palette.textPrimary),
           onPressed: () => ref.read(importedFilesProvider.notifier).clearSelection(),
         ),
         title: Text(
           '${state.selectedIds.length} selected',
-          style: const TextStyle(
-            color: AppColors.textPrimary,
+          style: TextStyle(
+            color: context.palette.textPrimary,
             fontSize: 16,
             fontWeight: FontWeight.w600,
           ),
@@ -308,10 +309,10 @@ class _MdLibraryScreenState extends ConsumerState<MdLibraryScreen>
     }
 
     return AppBar(
-      backgroundColor: AppColors.backgroundSurface,
+      backgroundColor: context.palette.backgroundSurface,
       elevation: 0,
       leading: IconButton(
-        icon: const Icon(Icons.arrow_back, color: AppColors.textPrimary),
+        icon: Icon(Icons.arrow_back, color: context.palette.textPrimary),
         onPressed: () => Navigator.pop(context),
       ),
       title: Row(
@@ -322,10 +323,10 @@ class _MdLibraryScreenState extends ConsumerState<MdLibraryScreen>
             color: AppColors.accent,
           ),
           const SizedBox(width: 10),
-          const Text(
+          Text(
             'My Library',
             style: TextStyle(
-              color: AppColors.textPrimary,
+              color: context.palette.textPrimary,
               fontSize: 18,
               fontWeight: FontWeight.w700,
             ),
@@ -338,7 +339,7 @@ class _MdLibraryScreenState extends ConsumerState<MdLibraryScreen>
             icon: PhosphorIcon(
               _showSearch ? PhosphorIconsFill.magnifyingGlass : PhosphorIconsRegular.magnifyingGlass,
               size: 22,
-              color: _showSearch ? AppColors.accent : AppColors.textSecondary,
+              color: _showSearch ? AppColors.accent : context.palette.textSecondary,
             ),
             onPressed: () {
               setState(() {
@@ -355,7 +356,7 @@ class _MdLibraryScreenState extends ConsumerState<MdLibraryScreen>
             icon: PhosphorIcon(
               PhosphorIconsRegular.funnel,
               size: 22,
-              color: AppColors.textSecondary,
+              color: context.palette.textSecondary,
             ),
             onPressed: _showSortMenu,
             tooltip: 'Sort',
@@ -369,9 +370,9 @@ class _MdLibraryScreenState extends ConsumerState<MdLibraryScreen>
     return Container(
       margin: const EdgeInsets.fromLTRB(16, 12, 16, 4),
       decoration: BoxDecoration(
-        color: AppColors.backgroundElevated,
+        color: context.palette.backgroundElevated,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.borderSubtle),
+        border: Border.all(color: context.palette.borderSubtle),
       ),
       child: Row(
         children: [
@@ -379,27 +380,27 @@ class _MdLibraryScreenState extends ConsumerState<MdLibraryScreen>
           PhosphorIcon(
             PhosphorIconsRegular.magnifyingGlass,
             size: 18,
-            color: AppColors.textMuted,
+            color: context.palette.textMuted,
           ),
           const SizedBox(width: 10),
           Expanded(
             child: TextField(
               controller: _searchController,
               autofocus: true,
-              decoration: const InputDecoration(
+              decoration: InputDecoration(
                 hintText: 'Search files...',
-                hintStyle: TextStyle(color: AppColors.textMuted, fontSize: 14),
+                hintStyle: TextStyle(color: context.palette.textMuted, fontSize: 14),
                 border: InputBorder.none,
                 contentPadding: EdgeInsets.symmetric(vertical: 12),
               ),
-              style: const TextStyle(color: AppColors.textPrimary, fontSize: 14),
+              style: TextStyle(color: context.palette.textPrimary, fontSize: 14),
               onChanged: (value) =>
                   ref.read(importedFilesProvider.notifier).setSearchQuery(value),
             ),
           ),
           if (_searchController.text.isNotEmpty)
             IconButton(
-              icon: PhosphorIcon(PhosphorIconsRegular.x, size: 16, color: AppColors.textMuted),
+              icon: PhosphorIcon(PhosphorIconsRegular.x, size: 16, color: context.palette.textMuted),
               onPressed: () {
                 _searchController.clear();
                 ref.read(importedFilesProvider.notifier).setSearchQuery('');
@@ -422,8 +423,8 @@ class _MdLibraryScreenState extends ConsumerState<MdLibraryScreen>
         children: [
           Text(
             showing == total ? '$total files' : '$showing of $total files',
-            style: const TextStyle(
-              color: AppColors.textMuted,
+            style: TextStyle(
+              color: context.palette.textMuted,
               fontSize: 12,
               fontWeight: FontWeight.w500,
               letterSpacing: 0.5,
@@ -432,8 +433,8 @@ class _MdLibraryScreenState extends ConsumerState<MdLibraryScreen>
           const Spacer(),
           Text(
             _sortModeLabel(state.sortMode),
-            style: const TextStyle(
-              color: AppColors.textMuted,
+            style: TextStyle(
+              color: context.palette.textMuted,
               fontSize: 12,
             ),
           ),
@@ -477,12 +478,12 @@ class _MdLibraryScreenState extends ConsumerState<MdLibraryScreen>
             PhosphorIcon(
               PhosphorIconsRegular.magnifyingGlass,
               size: 48,
-              color: AppColors.textMuted,
+              color: context.palette.textMuted,
             ),
             const SizedBox(height: 16),
             Text(
               'No files match "${state.searchQuery}"',
-              style: const TextStyle(color: AppColors.textMuted, fontSize: 15),
+              style: TextStyle(color: context.palette.textMuted, fontSize: 15),
             ),
           ],
         ),
@@ -492,7 +493,7 @@ class _MdLibraryScreenState extends ConsumerState<MdLibraryScreen>
     return RefreshIndicator(
       onRefresh: () => ref.read(importedFilesProvider.notifier).loadAll(),
       color: AppColors.accent,
-      backgroundColor: AppColors.backgroundElevated,
+      backgroundColor: context.palette.backgroundElevated,
       child: ListView.builder(
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 100), // bottom padding for FAB
         itemCount: filtered.length,
@@ -554,19 +555,19 @@ class _MdLibraryScreenState extends ConsumerState<MdLibraryScreen>
               ),
             ),
             const SizedBox(height: 28),
-            const Text(
+            Text(
               'Your Library is Empty',
               style: TextStyle(
-                color: AppColors.textPrimary,
+                color: context.palette.textPrimary,
                 fontSize: 22,
                 fontWeight: FontWeight.w800,
               ),
             ),
             const SizedBox(height: 12),
-            const Text(
+            Text(
               'Import Markdown files from your device\nto build your personal reading library.',
               style: TextStyle(
-                color: AppColors.textMuted,
+                color: context.palette.textMuted,
                 fontSize: 15,
                 height: 1.6,
               ),
@@ -578,9 +579,9 @@ class _MdLibraryScreenState extends ConsumerState<MdLibraryScreen>
               margin: const EdgeInsets.symmetric(vertical: 16),
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: AppColors.backgroundElevated,
+                color: context.palette.backgroundElevated,
                 borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: AppColors.borderSubtle),
+                border: Border.all(color: context.palette.borderSubtle),
               ),
               child: Column(
                 children: [
@@ -644,7 +645,7 @@ class _MdLibraryScreenState extends ConsumerState<MdLibraryScreen>
             const SizedBox(height: 20),
             Text(
               error,
-              style: const TextStyle(color: AppColors.textMuted, fontSize: 14),
+              style: TextStyle(color: context.palette.textMuted, fontSize: 14),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 20),
@@ -713,10 +714,10 @@ class _FileCard extends StatelessWidget {
           decoration: BoxDecoration(
             color: isSelected
                 ? AppColors.accent.withValues(alpha: 0.12)
-                : AppColors.backgroundSurface,
+                : context.palette.backgroundSurface,
             borderRadius: BorderRadius.circular(14),
             border: Border.all(
-              color: isSelected ? AppColors.accent.withValues(alpha: 0.4) : AppColors.borderSubtle,
+              color: isSelected ? AppColors.accent.withValues(alpha: 0.4) : context.palette.borderSubtle,
               width: isSelected ? 1.5 : 1,
             ),
           ),
@@ -746,7 +747,7 @@ class _FileCard extends StatelessWidget {
                             border: Border.all(
                               color: isSelected
                                   ? AppColors.accent
-                                  : AppColors.borderDefault,
+                                  : context.palette.borderDefault,
                               width: 1.5,
                             ),
                           ),
@@ -777,8 +778,8 @@ class _FileCard extends StatelessWidget {
                         children: [
                           Text(
                             file.originalName,
-                            style: const TextStyle(
-                              color: AppColors.textPrimary,
+                            style: TextStyle(
+                              color: context.palette.textPrimary,
                               fontSize: 15,
                               fontWeight: FontWeight.w600,
                             ),
@@ -790,8 +791,8 @@ class _FileCard extends StatelessWidget {
                             children: [
                               Text(
                                 file.formattedSize,
-                                style: const TextStyle(
-                                  color: AppColors.textMuted,
+                                style: TextStyle(
+                                  color: context.palette.textMuted,
                                   fontSize: 12,
                                 ),
                               ),
@@ -799,15 +800,15 @@ class _FileCard extends StatelessWidget {
                                 width: 3,
                                 height: 3,
                                 margin: const EdgeInsets.symmetric(horizontal: 8),
-                                decoration: const BoxDecoration(
-                                  color: AppColors.textMuted,
+                                decoration: BoxDecoration(
+                                  color: context.palette.textMuted,
                                   shape: BoxShape.circle,
                                 ),
                               ),
                               Text(
                                 _formatDate(file.importedAt),
-                                style: const TextStyle(
-                                  color: AppColors.textMuted,
+                                style: TextStyle(
+                                  color: context.palette.textMuted,
                                   fontSize: 12,
                                 ),
                               ),
@@ -821,7 +822,7 @@ class _FileCard extends StatelessWidget {
                       PhosphorIcon(
                         PhosphorIconsRegular.caretRight,
                         size: 18,
-                        color: AppColors.textMuted,
+                        color: context.palette.textMuted,
                       ),
                   ],
                 ),
@@ -861,8 +862,8 @@ class _FeatureHint extends StatelessWidget {
         Expanded(
           child: Text(
             text,
-            style: const TextStyle(
-              color: AppColors.textSecondary,
+            style: TextStyle(
+              color: context.palette.textSecondary,
               fontSize: 13,
               height: 1.4,
             ),

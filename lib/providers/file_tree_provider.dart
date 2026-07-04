@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/file_node.dart';
 import '../models/app_settings.dart';
@@ -20,14 +21,27 @@ class FileTreeNotifier extends StateNotifier<AsyncValue<List<FileNode>>> {
   // Track expanded folders for state restoration
   final Set<String> _expandedPaths = {};
 
+  // Remember the last load context so watcher-driven reloads can reuse it.
+  List<String> _rootFolders = [];
+  AppSettings? _lastSettings;
+
+  // Single, long-lived subscription to filesystem change events + debounce.
+  StreamSubscription<String>? _watcherSub;
+  Timer? _debounce;
+
   FileTreeNotifier() : super(const AsyncValue.data([]));
 
   /// Load all root folders (shallow listing — instant).
   Future<void> loadRoots(List<String> rootFolders, AppSettings settings, {WidgetRef? ref}) async {
+    // Remember context for watcher-driven reloads.
+    _rootFolders = rootFolders;
+    _lastSettings = settings;
+
     if (rootFolders.isEmpty) {
       state = const AsyncValue.data([]);
       // Also clear current folder files
       ref?.read(currentFolderFilesProvider.notifier).state = [];
+      _setupWatchers(rootFolders);
       return;
     }
 
@@ -158,15 +172,70 @@ class FileTreeNotifier extends StateNotifier<AsyncValue<List<FileNode>>> {
   // ─── Private ───
 
   void _setupWatchers(List<String> rootFolders) {
-    _watcherService.dispose();
+    // Cancel existing watchers but keep the change stream alive.
+    _watcherService.stopAll();
 
-    _watcherService.changes.listen((changedPath) {
-      _fileService.invalidateCache(changedPath);
-    });
+    // Subscribe exactly once for the lifetime of this notifier.
+    _watcherSub ??= _watcherService.changes.listen(_onFilesystemChange);
 
     for (final root in rootFolders) {
       _watcherService.watch(root);
     }
+  }
+
+  /// Filesystem change handler — invalidates cache and debounces a reload so a
+  /// burst of events (e.g. a git checkout) results in a single refresh.
+  void _onFilesystemChange(String changedPath) {
+    _fileService.invalidateCache(changedPath);
+    _debounce?.cancel();
+    _debounce = Timer(const Duration(milliseconds: 600), () {
+      final settings = _lastSettings;
+      if (settings == null || _rootFolders.isEmpty) return;
+      _reloadPreservingExpansion(settings);
+    });
+  }
+
+  /// Re-scan roots and re-apply the previously expanded folders so live
+  /// updates don't collapse the user's place in the tree.
+  Future<void> _reloadPreservingExpansion(AppSettings settings) async {
+    final expanded = _expandedPaths.toList()
+      // Expand shallower paths first so children splice onto fresh parents.
+      ..sort((a, b) => a.length.compareTo(b.length));
+
+    final allowed = Set<String>.from(settings.allowedExtensions);
+
+    // Fresh shallow roots.
+    final roots = <FileNode>[];
+    final results = await Future.wait(
+      _rootFolders.map((root) => _fileService.buildRootNode(
+            root,
+            allowedExtensions: allowed,
+            showHidden: settings.showHiddenFiles,
+          )),
+    );
+    for (final node in results) {
+      if (node != null) roots.add(node);
+    }
+
+    var tree = roots;
+    // Re-apply expansion by re-listing each still-existing expanded folder.
+    for (final path in expanded) {
+      final children = await _fileService.listDirectory(
+        path,
+        allowedExtensions: allowed,
+        showHidden: settings.showHiddenFiles,
+      );
+      tree = _updateNode(tree, path, (node) => FileNode(
+            path: node.path,
+            name: node.name,
+            isDirectory: node.isDirectory,
+            lastModified: node.lastModified,
+            children: children,
+            isExpanded: true,
+          ));
+    }
+
+    state = AsyncValue.data(tree);
   }
 
   List<FileNode> _updateNode(
@@ -192,6 +261,8 @@ class FileTreeNotifier extends StateNotifier<AsyncValue<List<FileNode>>> {
 
   @override
   void dispose() {
+    _debounce?.cancel();
+    _watcherSub?.cancel();
     _watcherService.dispose();
     super.dispose();
   }

@@ -5,6 +5,7 @@ import 'package:phosphor_flutter/phosphor_flutter.dart';
 import '../models/app_settings.dart';
 import '../providers/providers.dart';
 import '../utils/constants.dart';
+import '../utils/palette.dart';
 
 /// Settings page: manage root folders, theme, and preferences.
 class SettingsScreen extends ConsumerStatefulWidget {
@@ -53,17 +54,17 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     final settings = ref.watch(settingsProvider);
 
     return Scaffold(
-      backgroundColor: AppColors.backgroundBase,
+      backgroundColor: context.palette.backgroundBase,
       appBar: AppBar(
-        backgroundColor: AppColors.backgroundSurface,
+        backgroundColor: context.palette.backgroundSurface,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: AppColors.textPrimary),
+          icon: Icon(Icons.arrow_back, color: context.palette.textPrimary),
           onPressed: () => Navigator.of(context).pop(),
         ),
-        title: const Text(
+        title: Text(
           'Settings',
-          style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.w600),
+          style: TextStyle(color: context.palette.textPrimary, fontWeight: FontWeight.w600),
         ),
       ),
       body: ListView(
@@ -109,13 +110,13 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
           const SizedBox(height: 16),
           SwitchListTile(
-            title: const Text(
+            title: Text(
               'Show hidden files',
-              style: TextStyle(color: AppColors.textSecondary),
+              style: TextStyle(color: context.palette.textSecondary),
             ),
-            subtitle: const Text(
+            subtitle: Text(
               'Include files and folders starting with a dot',
-              style: TextStyle(color: AppColors.textMuted, fontSize: 12),
+              style: TextStyle(color: context.palette.textMuted, fontSize: 12),
             ),
             value: settings.showHiddenFiles,
             onChanged: (value) {
@@ -157,8 +158,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             icon: const Icon(Icons.refresh, size: 18),
             label: const Text('Refresh All Folders'),
             style: FilledButton.styleFrom(
-              backgroundColor: AppColors.backgroundElevated,
-              foregroundColor: AppColors.textPrimary,
+              backgroundColor: context.palette.backgroundElevated,
+              foregroundColor: context.palette.textPrimary,
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             ),
           ),
@@ -166,18 +167,18 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           const SizedBox(height: 48),
 
           // ─── About ───
-          const Divider(color: AppColors.borderSubtle),
+          Divider(color: context.palette.borderSubtle),
           const SizedBox(height: 16),
           Center(
             child: Text(
               'MD Explorer v1.0.0',
-              style: TextStyle(color: AppColors.textMuted, fontSize: 12),
+              style: TextStyle(color: context.palette.textMuted, fontSize: 12),
             ),
           ),
           Center(
             child: Text(
               'Built with Flutter',
-              style: TextStyle(color: AppColors.textMuted, fontSize: 11),
+              style: TextStyle(color: context.palette.textMuted, fontSize: 11),
             ),
           ),
           const SizedBox(height: 24),
@@ -202,7 +203,7 @@ class _SectionHeader extends StatelessWidget {
         Text(
           title,
           style: TextStyle(
-            color: AppColors.textPrimary,
+            color: context.palette.textPrimary,
             fontSize: 16,
             fontWeight: FontWeight.w600,
           ),
@@ -222,13 +223,13 @@ class _EmptyStateMessage extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppColors.backgroundElevated,
+        color: context.palette.backgroundElevated,
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: AppColors.borderSubtle),
+        border: Border.all(color: context.palette.borderSubtle),
       ),
       child: Text(
         message,
-        style: TextStyle(color: AppColors.textMuted, fontSize: 14),
+        style: TextStyle(color: context.palette.textMuted, fontSize: 14),
         textAlign: TextAlign.center,
       ),
     );
@@ -247,9 +248,9 @@ class _FolderItem extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 8),
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
-        color: AppColors.backgroundElevated,
+        color: context.palette.backgroundElevated,
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: AppColors.borderSubtle),
+        border: Border.all(color: context.palette.borderSubtle),
       ),
       child: Row(
         children: [
@@ -262,7 +263,7 @@ class _FolderItem extends StatelessWidget {
           Expanded(
             child: Text(
               path,
-              style: TextStyle(color: AppColors.textSecondary, fontSize: 13),
+              style: TextStyle(color: context.palette.textSecondary, fontSize: 13),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
             ),
@@ -271,7 +272,7 @@ class _FolderItem extends StatelessWidget {
             icon: PhosphorIcon(
               PhosphorIconsRegular.trash,
               size: 16,
-              color: AppColors.textMuted,
+              color: context.palette.textMuted,
             ),
             onPressed: onRemove,
             padding: EdgeInsets.zero,
@@ -295,7 +296,7 @@ class _ThemeSelector extends ConsumerWidget {
         Expanded(
           child: Text(
             'Theme',
-            style: TextStyle(color: AppColors.textSecondary, fontSize: 14),
+            style: TextStyle(color: context.palette.textSecondary, fontSize: 14),
           ),
         ),
         SegmentedButton<ThemeMode>(
@@ -309,11 +310,11 @@ class _ThemeSelector extends ConsumerWidget {
             ref.read(settingsProvider.notifier).update(themeMode: selected.first);
           },
           style: SegmentedButton.styleFrom(
-            backgroundColor: AppColors.backgroundElevated,
-            foregroundColor: AppColors.textPrimary,
+            backgroundColor: context.palette.backgroundElevated,
+            foregroundColor: context.palette.textPrimary,
             selectedBackgroundColor: AppColors.accentSoft,
             selectedForegroundColor: AppColors.accent,
-            side: BorderSide(color: AppColors.borderSubtle),
+            side: BorderSide(color: context.palette.borderSubtle),
           ),
         ),
       ],
@@ -336,12 +337,12 @@ class _FontSizeSlider extends ConsumerWidget {
             Expanded(
               child: Text(
                 'Markdown font size',
-                style: TextStyle(color: AppColors.textSecondary, fontSize: 14),
+                style: TextStyle(color: context.palette.textSecondary, fontSize: 14),
               ),
             ),
             Text(
               '${settings.markdownFontSize.toInt()}',
-              style: TextStyle(color: AppColors.textMuted, fontSize: 14),
+              style: TextStyle(color: context.palette.textMuted, fontSize: 14),
             ),
           ],
         ),
@@ -390,10 +391,10 @@ class _ExtensionChips extends ConsumerWidget {
           selectedColor: AppColors.accentSoft,
           checkmarkColor: AppColors.accent,
           labelStyle: TextStyle(
-            color: isSelected ? AppColors.accent : AppColors.textSecondary,
+            color: isSelected ? AppColors.accent : context.palette.textSecondary,
           ),
           side: BorderSide(
-            color: isSelected ? AppColors.accent : AppColors.borderSubtle,
+            color: isSelected ? AppColors.accent : context.palette.borderSubtle,
           ),
         );
       }).toList(),

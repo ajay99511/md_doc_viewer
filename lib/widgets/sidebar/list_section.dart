@@ -4,6 +4,8 @@ import 'package:phosphor_flutter/phosphor_flutter.dart';
 import '../../models/file_node.dart';
 import '../../providers/providers.dart';
 import '../../utils/constants.dart';
+import '../../utils/palette.dart';
+import '../../utils/responsive.dart';
 import 'create_list_dialog.dart';
 
 /// Lists (Collections) section in the sidebar.
@@ -14,63 +16,65 @@ class ListSection extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final listsAsync = ref.watch(listsProvider);
 
-    return listsAsync.when(
-      data: (lists) {
-        if (lists.isEmpty) {
-          return const SizedBox.shrink();
-        }
+    final lists = listsAsync.value ?? const <ListData>[];
 
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Divider(height: 1, color: AppColors.borderSubtle),
-            // Header with create button
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 12, 8, 8),
-              child: Row(
-                children: [
-                  PhosphorIcon(
-                    PhosphorIconsRegular.listBullets,
-                    size: 16,
-                    color: AppColors.accent,
-                  ),
-                  const SizedBox(width: 8),
-                  const Text(
-                    'LISTS',
-                    style: TextStyle(
-                      color: AppColors.textMuted,
-                      fontSize: 11,
-                      fontWeight: FontWeight.w600,
-                      letterSpacing: 1.2,
-                    ),
-                  ),
-                  const Spacer(),
-                  IconButton(
-                    icon: PhosphorIcon(
-                      PhosphorIconsRegular.plus,
-                      size: 14,
-                      color: AppColors.textMuted,
-                    ),
-                    onPressed: () {
-                      showDialog(
-                        context: context,
-                        builder: (_) => const CreateListDialog(),
-                      );
-                    },
-                    padding: EdgeInsets.zero,
-                    constraints: const BoxConstraints(),
-                    tooltip: 'Create new list',
-                  ),
-                ],
+    // Header is ALWAYS shown so the user can create their first list.
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Divider(height: 1, color: context.palette.borderSubtle),
+        // Header with create button
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 12, 8, 8),
+          child: Row(
+            children: [
+              PhosphorIcon(
+                PhosphorIconsRegular.listBullets,
+                size: 16,
+                color: AppColors.accent,
               ),
+              const SizedBox(width: 8),
+              Text(
+                'LISTS',
+                style: TextStyle(
+                  color: context.palette.textMuted,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                  letterSpacing: 1.2,
+                ),
+              ),
+              const Spacer(),
+              IconButton(
+                icon: PhosphorIcon(
+                  PhosphorIconsRegular.plus,
+                  size: 14,
+                  color: context.palette.textMuted,
+                ),
+                onPressed: () {
+                  showDialog(
+                    context: context,
+                    builder: (_) => const CreateListDialog(),
+                  );
+                },
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                tooltip: 'Create new list',
+              ),
+            ],
+          ),
+        ),
+        // List items, or a gentle hint when empty.
+        if (lists.isEmpty)
+          Padding(
+            padding: EdgeInsets.fromLTRB(16, 0, 16, 12),
+            child: Text(
+              'Group related folders into a list. Tap + to create one.',
+              style: TextStyle(color: context.palette.textMuted, fontSize: 11, height: 1.4),
             ),
-            // List items
-            ...lists.map((list) => _ListItem(listData: list)),
-          ],
-        );
-      },
-      loading: () => const SizedBox.shrink(),
-      error: (_, _) => const SizedBox.shrink(),
+          )
+        else
+          ...lists.map((list) => _ListItem(listData: list)),
+      ],
     );
   }
 }
@@ -91,13 +95,18 @@ class _ListItem extends ConsumerWidget {
         final settings = ref.read(settingsProvider);
         final treeNotifier = ref.read(fileTreeProvider.notifier);
 
-        // Load all folders in parallel
+        // Load all folders (skip directories — we only want files in the list view)
         final allFiles = <FileNode>[];
         for (final folderPath in fullList.folderPaths) {
           final files = await treeNotifier.navigateToFolder(folderPath, settings);
-          allFiles.addAll(files);
+          allFiles.addAll(files.where((f) => !f.isDirectory));
         }
         ref.read(currentFolderFilesProvider.notifier).state = allFiles;
+
+        // On mobile, surface the Files panel so the user sees the result.
+        if (context.mounted && AppBreakpoints.isCompact(context)) {
+          ref.read(uiProvider.notifier).setMobilePanel(MobilePanel.files);
+        }
       },
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
@@ -115,8 +124,8 @@ class _ListItem extends ConsumerWidget {
                 children: [
                   Text(
                     listData.name,
-                    style: const TextStyle(
-                      color: AppColors.textSecondary,
+                    style: TextStyle(
+                      color: context.palette.textSecondary,
                       fontSize: 13,
                       fontWeight: FontWeight.w500,
                     ),
@@ -125,8 +134,8 @@ class _ListItem extends ConsumerWidget {
                   ),
                   Text(
                     '${listData.folderCount} folder${listData.folderCount != 1 ? 's' : ''}',
-                    style: const TextStyle(
-                      color: AppColors.textMuted,
+                    style: TextStyle(
+                      color: context.palette.textMuted,
                       fontSize: 11,
                     ),
                   ),
@@ -138,7 +147,7 @@ class _ListItem extends ConsumerWidget {
               icon: PhosphorIcon(
                 PhosphorIconsRegular.dotsThree,
                 size: 16,
-                color: AppColors.textMuted,
+                color: context.palette.textMuted,
               ),
               padding: EdgeInsets.zero,
               constraints: const BoxConstraints(),
@@ -186,21 +195,21 @@ class _ListItem extends ConsumerWidget {
     showDialog(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        backgroundColor: AppColors.backgroundElevated,
-        title: const Text('Rename List', style: TextStyle(color: AppColors.textPrimary)),
+        backgroundColor: context.palette.backgroundElevated,
+        title: Text('Rename List', style: TextStyle(color: context.palette.textPrimary)),
         content: TextField(
           controller: controller,
-          style: const TextStyle(color: AppColors.textPrimary),
-          decoration: const InputDecoration(
+          style: TextStyle(color: context.palette.textPrimary),
+          decoration: InputDecoration(
             hintText: 'List name',
-            hintStyle: TextStyle(color: AppColors.textMuted),
+            hintStyle: TextStyle(color: context.palette.textMuted),
           ),
           autofocus: true,
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dialogContext),
-            child: const Text('Cancel', style: TextStyle(color: AppColors.textMuted)),
+            child: Text('Cancel', style: TextStyle(color: context.palette.textMuted)),
           ),
           FilledButton(
             onPressed: () {

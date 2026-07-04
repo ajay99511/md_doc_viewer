@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../providers/providers.dart';
-import '../../utils/constants.dart';
+import '../../utils/palette.dart';
 
 /// Dialog to create a new file list.
 class CreateListDialog extends ConsumerStatefulWidget {
@@ -25,10 +25,10 @@ class _CreateListDialogState extends ConsumerState<CreateListDialog> {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      backgroundColor: AppColors.backgroundElevated,
-      title: const Text(
+      backgroundColor: context.palette.backgroundElevated,
+      title: Text(
         'Create New List',
-        style: TextStyle(color: AppColors.textPrimary),
+        style: TextStyle(color: context.palette.textPrimary),
       ),
       content: SizedBox(
         width: 400,
@@ -37,24 +37,24 @@ class _CreateListDialogState extends ConsumerState<CreateListDialog> {
           children: [
             TextField(
               controller: _nameController,
-              style: const TextStyle(color: AppColors.textPrimary),
-              decoration: const InputDecoration(
+              style: TextStyle(color: context.palette.textPrimary),
+              decoration: InputDecoration(
                 labelText: 'List Name',
                 hintText: 'e.g., Project Docs, Learning Resources',
-                hintStyle: TextStyle(color: AppColors.textMuted),
-                labelStyle: TextStyle(color: AppColors.textSecondary),
+                hintStyle: TextStyle(color: context.palette.textMuted),
+                labelStyle: TextStyle(color: context.palette.textSecondary),
               ),
               autofocus: true,
             ),
             const SizedBox(height: 12),
             TextField(
               controller: _descController,
-              style: const TextStyle(color: AppColors.textPrimary),
-              decoration: const InputDecoration(
+              style: TextStyle(color: context.palette.textPrimary),
+              decoration: InputDecoration(
                 labelText: 'Description (optional)',
                 hintText: 'What is this list for?',
-                hintStyle: TextStyle(color: AppColors.textMuted),
-                labelStyle: TextStyle(color: AppColors.textSecondary),
+                hintStyle: TextStyle(color: context.palette.textMuted),
+                labelStyle: TextStyle(color: context.palette.textSecondary),
               ),
               maxLines: 2,
             ),
@@ -64,12 +64,15 @@ class _CreateListDialogState extends ConsumerState<CreateListDialog> {
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(context),
-          child: const Text('Cancel', style: TextStyle(color: AppColors.textMuted)),
+          child: Text('Cancel', style: TextStyle(color: context.palette.textMuted)),
         ),
-        Consumer(
-          builder: (context, ref, _) {
+        // Rebuilds as the user types so the button enables correctly.
+        ListenableBuilder(
+          listenable: _nameController,
+          builder: (context, _) {
+            final canCreate = _nameController.text.trim().isNotEmpty;
             return FilledButton(
-              onPressed: _nameController.text.trim().isEmpty
+              onPressed: !canCreate
                   ? null
                   : () {
                       ref.read(listsProvider.notifier).create(

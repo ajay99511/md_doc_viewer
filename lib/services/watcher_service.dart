@@ -48,12 +48,19 @@ class WatcherService {
     }
   }
 
-  /// Stop watching all directories.
-  void dispose() {
+  /// Cancel all active watchers but keep the [changes] stream open so the
+  /// service can be reused (e.g. when the watched root set changes).
+  void stopAll() {
     for (final sub in _subscriptions.values) {
       sub.cancel();
     }
     _subscriptions.clear();
+  }
+
+  /// Permanently tear down the service. After this the [changes] stream is
+  /// closed and the instance must not be reused.
+  void dispose() {
+    stopAll();
     _changeController.close();
   }
 }

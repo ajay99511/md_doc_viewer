@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:window_manager/window_manager.dart';
 import 'providers/providers.dart';
 import 'utils/constants.dart';
+import 'utils/palette.dart';
 import 'utils/syntax_languages.dart';
 import 'screens/home_screen.dart';
 
@@ -67,12 +68,16 @@ class MDExplorerApp extends ConsumerWidget {
   ThemeData _buildThemeData(Brightness brightness) {
     final isDark = brightness == Brightness.dark;
     final colorScheme = isDark ? darkColorScheme : lightColorScheme;
+    final palette = isDark ? AppPalette.dark : AppPalette.light;
 
     return ThemeData(
       colorScheme: colorScheme,
       brightness: brightness,
       useMaterial3: true,
-      scaffoldBackgroundColor: isDark ? Colors.transparent : const Color(0xFFF8FAFC),
+      extensions: [palette],
+      // Both themes render over the SpatialBackground, which paints the base
+      // color itself, so the scaffold stays transparent.
+      scaffoldBackgroundColor: Colors.transparent,
       appBarTheme: AppBarTheme(
         backgroundColor: isDark ? Colors.transparent : Colors.white,
         elevation: 0,

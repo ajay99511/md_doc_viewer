@@ -1,5 +1,17 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
-    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"/>
+    <!-- Legacy storage read (Android 12 / API 32 and below). On API 33+ this
+         permission is ignored in favour of granular media permissions, so it is
+         capped to avoid requesting a permission the platform won't honour. -->
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"
+        android:maxSdkVersion="32"/>
+    <!-- "All files access". REQUIRED for the desktop-style folder explorer,
+         which reads arbitrary user-chosen directories via dart:io on Android
+         11+ (scoped storage otherwise blocks non-media paths).
+         NOTE: Google Play restricts this permission to qualifying app
+         categories (file managers, backup, etc.) and requires a Play Console
+         declaration. If publishing to Play without that approval, remove this
+         line and rely on the in-app "My Library" import flow (SAF + app
+         storage), which needs no broad permissions. -->
     <uses-permission android:name="android.permission.MANAGE_EXTERNAL_STORAGE"/>
     <application
         android:label="MD Explorer"
